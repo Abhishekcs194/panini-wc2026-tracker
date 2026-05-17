@@ -278,6 +278,34 @@ function AddButton({ accent, onClick }: { accent: "amber" | "violet"; onClick: (
   );
 }
 
+// ── Search input ──────────────────────────────────────────────────────────────
+
+function SearchInput({ value, onChange, accent }: { value: string; onChange: (v: string) => void; accent: "amber" | "violet" }) {
+  const ring = accent === "amber" ? "focus-within:ring-amber-400/40 focus-within:border-amber-400/30" : "focus-within:ring-violet-400/40 focus-within:border-violet-400/30";
+  return (
+    <div className={`flex items-center gap-2.5 bg-white/5 border border-white/10 rounded-xl px-3.5 py-2.5 mb-3 ring-0 focus-within:ring-2 transition-all ${ring}`}>
+      <svg viewBox="0 0 20 20" fill="none" className="w-4.5 h-4.5 shrink-0 text-foreground/40">
+        <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.8"/>
+        <path d="M13.5 13.5L17 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Search by code, name or team…"
+        className="flex-1 bg-transparent text-base text-foreground placeholder:text-foreground/30 focus:outline-none min-w-0"
+      />
+      {value && (
+        <button onClick={() => onChange("")} className="text-foreground/30 hover:text-foreground/60 transition-colors shrink-0">
+          <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
+            <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Missing tab ───────────────────────────────────────────────────────────────
 
 function MissingTab({
@@ -290,6 +318,7 @@ function MissingTab({
   onRemove: (id: string) => void;
 }) {
   const [panelOpen, setPanelOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   function handleSave(raw: string) {
     const tokens = parseRawCodes(raw);
@@ -303,8 +332,11 @@ function MissingTab({
     setPanelOpen(false);
   }
 
-  const sorted = [...items].sort((a, b) => a.albumPos - b.albumPos);
-  const groups = groupBySection(sorted, (s) => s);
+  const q = query.trim().toLowerCase();
+  const filtered = [...items]
+    .filter((s) => !q || s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || s.section.toLowerCase().includes(q))
+    .sort((a, b) => a.albumPos - b.albumPos);
+  const groups = groupBySection(filtered, (s) => s);
 
   return (
     <div>
@@ -321,19 +353,26 @@ function MissingTab({
       )}
 
       {items.length === 0 ? (
-        <EmptyState hint={'No missing stickers yet. Tap “Add stickers” to log what you need.'} />
+        <EmptyState hint={'No missing stickers yet. Tap "Add stickers" to log what you need.'} />
       ) : (
-        <ScrollArea className="max-h-[62vh]">
-          <div className="pr-1">
-            {groups.map(([section, stickers]) => (
-              <SectionGroup key={section} title={section} count={stickers.length}>
-                {stickers.map((s) => (
-                  <StickerRow key={s.id} sticker={s} onRemove={() => onRemove(s.id)} />
+        <>
+          <SearchInput value={query} onChange={setQuery} accent="amber" />
+          {filtered.length === 0 ? (
+            <EmptyState hint={`No results for "${query}"`} />
+          ) : (
+            <ScrollArea className="max-h-[55vh]">
+              <div className="pr-1">
+                {groups.map(([section, stickers]) => (
+                  <SectionGroup key={section} title={section} count={stickers.length}>
+                    {stickers.map((s) => (
+                      <StickerRow key={s.id} sticker={s} onRemove={() => onRemove(s.id)} />
+                    ))}
+                  </SectionGroup>
                 ))}
-              </SectionGroup>
-            ))}
-          </div>
-        </ScrollArea>
+              </div>
+            </ScrollArea>
+          )}
+        </>
       )}
     </div>
   );
@@ -351,6 +390,7 @@ function DuplicatesTab({
   onRemove: (id: string) => void;
 }) {
   const [panelOpen, setPanelOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   function handleSave(raw: string) {
     const tokens = parseRawCodes(raw);
@@ -367,9 +407,11 @@ function DuplicatesTab({
     setPanelOpen(false);
   }
 
+  const q = query.trim().toLowerCase();
   const resolved = items
     .map((e) => ({ entry: e, sticker: STICKERS.find((s) => s.id === e.id)! }))
     .filter((x) => x.sticker)
+    .filter(({ sticker: s }) => !q || s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || s.section.toLowerCase().includes(q))
     .sort((a, b) => a.sticker.albumPos - b.sticker.albumPos);
 
   const groups = groupBySection(resolved, (x) => x.sticker);
@@ -391,22 +433,29 @@ function DuplicatesTab({
       {items.length === 0 ? (
         <EmptyState hint={'No duplicates yet. Tap "Add stickers" to log your extras.'} />
       ) : (
-        <ScrollArea className="max-h-[62vh]">
-          <div className="pr-1">
-            {groups.map(([section, entries]) => (
-              <SectionGroup key={section} title={section} count={entries.length}>
-                {entries.map(({ entry, sticker }) => (
-                  <StickerRow
-                    key={sticker.id}
-                    sticker={sticker}
-                    count={entry.count}
-                    onRemove={() => onRemove(sticker.id)}
-                  />
+        <>
+          <SearchInput value={query} onChange={setQuery} accent="violet" />
+          {resolved.length === 0 ? (
+            <EmptyState hint={`No results for "${query}"`} />
+          ) : (
+            <ScrollArea className="max-h-[55vh]">
+              <div className="pr-1">
+                {groups.map(([section, entries]) => (
+                  <SectionGroup key={section} title={section} count={entries.length}>
+                    {entries.map(({ entry, sticker }) => (
+                      <StickerRow
+                        key={sticker.id}
+                        sticker={sticker}
+                        count={entry.count}
+                        onRemove={() => onRemove(sticker.id)}
+                      />
+                    ))}
+                  </SectionGroup>
                 ))}
-              </SectionGroup>
-            ))}
-          </div>
-        </ScrollArea>
+              </div>
+            </ScrollArea>
+          )}
+        </>
       )}
     </div>
   );
