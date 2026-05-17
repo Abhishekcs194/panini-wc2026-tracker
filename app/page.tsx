@@ -9,20 +9,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import AuthModal from "@/components/AuthModal";
 
-const STORAGE_KEY_MISSING = "panini_missing_input";
-const STORAGE_KEY_DUPLICATES = "panini_duplicates_input";
-const STORAGE_KEY_TOKEN = "panini_token";
-const STORAGE_KEY_USERNAME = "panini_username";
+// ── Types ────────────────────────────────────────────────────────────────────
 
-const SYNC_DEBOUNCE_MS = 1500;
+type DuplicateEntry = { id: string; count: number };
 
-type DuplicateEntry = { sticker: Sticker; count: number };
+// ── Storage keys ─────────────────────────────────────────────────────────────
+
+const KEY_TOKEN = "panini_token";
+const KEY_USER  = "panini_username";
+
+const SYNC_DELAY = 1200;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function parseRawCodes(raw: string): string[] {
-  return raw
-    .split(/[\s,\n]+/)
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
+  return raw.split(/[\s,\n]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
 }
 
 function lookupSticker(token: string): Sticker | undefined {
@@ -39,11 +40,11 @@ function groupBySection<T>(items: T[], getSticker: (item: T) => Sticker): [strin
   return Array.from(map.entries());
 }
 
-// ── SVG decorations ──────────────────────────────────────────────────────────
+// ── SVGs ─────────────────────────────────────────────────────────────────────
 
 function TrophySVG({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg className={className} viewBox="0 0 64 64" fill="none">
       <path d="M32 4C24 4 18 10 18 18c0 10 8 18 14 22v6h-6v4h24v-4h-6v-6c6-4 14-12 14-22C58 10 52 4 44 4H32z" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
       <path d="M18 12H8c0 0 0 12 10 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
       <path d="M46 12h10c0 0 0 12-10 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -62,7 +63,7 @@ function StarSVG({ className }: { className?: string }) {
 
 function BallSVG({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg className={className} viewBox="0 0 64 64" fill="none">
       <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="1.5" fill="currentColor" fillOpacity="0.08"/>
       <polygon points="32,10 40,20 32,28 24,20" stroke="currentColor" strokeWidth="1.2" fill="currentColor" fillOpacity="0.2"/>
       <path d="M40 20l14 4M24 20L10 24M32 28l4 14M32 28l-4 14M44 24l6 14M20 24l-6 14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
@@ -70,7 +71,7 @@ function BallSVG({ className }: { className?: string }) {
   );
 }
 
-// ── Background ───────────────────────────────────────────────────────────────
+// ── Background ────────────────────────────────────────────────────────────────
 
 function Background() {
   return (
@@ -89,18 +90,13 @@ function Background() {
   );
 }
 
-// ── Cloud sync indicator ─────────────────────────────────────────────────────
+// ── Header ────────────────────────────────────────────────────────────────────
 
 function SyncDot({ syncing }: { syncing: boolean }) {
   return (
-    <span
-      className={`inline-block w-1.5 h-1.5 rounded-full transition-colors ${syncing ? "bg-amber-400 animate-pulse" : "bg-green-400"}`}
-      title={syncing ? "Saving…" : "Saved"}
-    />
+    <span className={`inline-block w-1.5 h-1.5 rounded-full transition-colors ${syncing ? "bg-amber-400 animate-pulse" : "bg-green-400"}`} />
   );
 }
-
-// ── Header ───────────────────────────────────────────────────────────────────
 
 function Header({ username, syncing, onLogout }: { username: string; syncing: boolean; onLogout: () => void }) {
   return (
@@ -120,10 +116,7 @@ function Header({ username, syncing, onLogout }: { username: string; syncing: bo
             <SyncDot syncing={syncing} />
             <span className="text-xs text-foreground/80 font-medium">@{username}</span>
           </div>
-          <button
-            onClick={onLogout}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5"
-          >
+          <button onClick={onLogout} className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5">
             Sign out
           </button>
         </div>
@@ -137,11 +130,74 @@ function Header({ username, syncing, onLogout }: { username: string; syncing: bo
   );
 }
 
-// ── Sticker row ──────────────────────────────────────────────────────────────
+// ── Add panel ─────────────────────────────────────────────────────────────────
 
-function StickerRow({ sticker, count }: { sticker: Sticker; count?: number }) {
+function AddPanel({
+  accent,
+  placeholder,
+  hint,
+  onSave,
+  onCancel,
+}: {
+  accent: "amber" | "violet";
+  placeholder: string;
+  hint: React.ReactNode;
+  onSave: (raw: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState("");
+  const ring = accent === "amber" ? "focus-visible:ring-amber-400/50 focus-visible:border-amber-400/30" : "focus-visible:ring-violet-400/50 focus-visible:border-violet-400/30";
+  const btn  = accent === "amber" ? "bg-amber-400 hover:bg-amber-300 text-black" : "bg-violet-500 hover:bg-violet-400 text-white";
+
+  function handleSave() {
+    onSave(value);
+    setValue("");
+  }
+
   return (
-    <div className="flex items-center gap-2.5 py-2.5 border-b border-white/5 last:border-0">
+    <Card className="bg-white/5 border-white/10 mb-4">
+      <CardContent className="pt-3 pb-3 px-3 space-y-2">
+        <Textarea
+          autoFocus
+          className={`font-mono text-sm bg-white/5 border-white/10 placeholder:text-muted-foreground/40 resize-none h-24 text-foreground ${ring}`}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground px-0.5">{hint}</p>
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={handleSave}
+            disabled={!value.trim()}
+            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${btn}`}
+          >
+            Save to list
+          </button>
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors border border-white/10"
+          >
+            Cancel
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Sticker row ───────────────────────────────────────────────────────────────
+
+function StickerRow({
+  sticker,
+  count,
+  onRemove,
+}: {
+  sticker: Sticker;
+  count?: number;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2 py-2.5 border-b border-white/5 last:border-0 group">
       <div className="flex items-center gap-1.5 shrink-0">
         {sticker.foil && (
           <Badge className="text-[10px] px-1.5 py-0 bg-gradient-to-r from-amber-400 to-yellow-300 text-black font-bold border-0">
@@ -163,6 +219,15 @@ function StickerRow({ sticker, count }: { sticker: Sticker; count?: number }) {
           ×{count}
         </Badge>
       )}
+      <button
+        onClick={onRemove}
+        className="ml-1 w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
+        aria-label="Remove"
+      >
+        <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5">
+          <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+      </button>
     </div>
   );
 }
@@ -183,73 +248,90 @@ function SectionGroup({ title, count, children }: { title: string; count: number
   );
 }
 
-function UnknownGroup({ codes }: { codes: string[] }) {
-  return (
-    <SectionGroup title="Not recognized" count={codes.length}>
-      {codes.map((code) => (
-        <div key={code} className="flex items-center gap-2 py-2.5 border-b border-white/5 last:border-0">
-          <span className="font-mono text-sm text-red-400/80">{code}</span>
-          <span className="text-xs text-muted-foreground">— unknown code</span>
-        </div>
-      ))}
-    </SectionGroup>
-  );
-}
+// ── Empty state ───────────────────────────────────────────────────────────────
 
 function EmptyState({ hint }: { hint: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
+    <div className="flex flex-col items-center justify-center py-14 gap-3 text-center px-6">
       <BallSVG className="w-14 h-14 text-muted-foreground/20" />
       <p className="text-sm text-muted-foreground">{hint}</p>
     </div>
   );
 }
 
-function InputHint({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs text-muted-foreground mt-1.5 px-1">{children}</p>;
+// ── Add button ────────────────────────────────────────────────────────────────
+
+function AddButton({ accent, onClick }: { accent: "amber" | "violet"; onClick: () => void }) {
+  const cls = accent === "amber"
+    ? "border-amber-400/20 text-amber-400 hover:bg-amber-400/10"
+    : "border-violet-400/20 text-violet-400 hover:bg-violet-400/10";
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed text-sm font-semibold transition-colors mb-4 ${cls}`}
+    >
+      <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
+        <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+      Add stickers
+    </button>
+  );
 }
 
 // ── Missing tab ───────────────────────────────────────────────────────────────
 
-function MissingTab({ input, onInput }: { input: string; onInput: (v: string) => void }) {
-  const tokens = parseRawCodes(input);
-  const found: Sticker[] = [];
-  const notRecognized: string[] = [];
-  for (const token of tokens) {
-    const s = lookupSticker(token);
-    if (s) found.push(s);
-    else notRecognized.push(token);
+function MissingTab({
+  items,
+  onAdd,
+  onRemove,
+}: {
+  items: Sticker[];
+  onAdd: (stickers: Sticker[]) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  function handleSave(raw: string) {
+    const tokens = parseRawCodes(raw);
+    const newStickers: Sticker[] = [];
+    const existingIds = new Set(items.map((s) => s.id));
+    for (const token of tokens) {
+      const s = lookupSticker(token);
+      if (s && !existingIds.has(s.id)) newStickers.push(s);
+    }
+    if (newStickers.length > 0) onAdd(newStickers);
+    setPanelOpen(false);
   }
-  const sorted = [...found].sort((a, b) => a.albumPos - b.albumPos);
+
+  const sorted = [...items].sort((a, b) => a.albumPos - b.albumPos);
   const groups = groupBySection(sorted, (s) => s);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Textarea
-          className="font-mono text-sm bg-white/5 border-white/10 placeholder:text-muted-foreground/40 focus-visible:ring-amber-400/50 focus-visible:border-amber-400/30 resize-none h-28 text-foreground"
+    <div>
+      {panelOpen ? (
+        <AddPanel
+          accent="amber"
           placeholder={"FWC1, ARG3, MEX17\nOne code per line or comma-separated"}
-          value={input}
-          onChange={(e) => onInput(e.target.value)}
+          hint={<>Case-insensitive · e.g. <span className="text-amber-300 font-mono">FWC1</span>, <span className="text-amber-300 font-mono">arg3</span></>}
+          onSave={handleSave}
+          onCancel={() => setPanelOpen(false)}
         />
-        <InputHint>
-          Case-insensitive · e.g.{" "}
-          <span className="text-amber-300 font-mono">FWC1</span>,{" "}
-          <span className="text-amber-300 font-mono">arg3</span>,{" "}
-          <span className="text-amber-300 font-mono">MEX17</span>
-        </InputHint>
-      </div>
-      {tokens.length === 0 ? (
-        <EmptyState hint="Enter sticker codes above to see your missing stickers grouped by team." />
       ) : (
-        <ScrollArea className="max-h-[55vh]">
+        <AddButton accent="amber" onClick={() => setPanelOpen(true)} />
+      )}
+
+      {items.length === 0 ? (
+        <EmptyState hint={'No missing stickers yet. Tap “Add stickers” to log what you need.'} />
+      ) : (
+        <ScrollArea className="max-h-[62vh]">
           <div className="pr-1">
             {groups.map(([section, stickers]) => (
               <SectionGroup key={section} title={section} count={stickers.length}>
-                {stickers.map((s) => <StickerRow key={s.id} sticker={s} />)}
+                {stickers.map((s) => (
+                  <StickerRow key={s.id} sticker={s} onRemove={() => onRemove(s.id)} />
+                ))}
               </SectionGroup>
             ))}
-            {notRecognized.length > 0 && <UnknownGroup codes={notRecognized} />}
           </div>
         </ScrollArea>
       )}
@@ -259,47 +341,71 @@ function MissingTab({ input, onInput }: { input: string; onInput: (v: string) =>
 
 // ── Duplicates tab ────────────────────────────────────────────────────────────
 
-function DuplicatesTab({ input, onInput }: { input: string; onInput: (v: string) => void }) {
-  const tokens = parseRawCodes(input);
-  const found: DuplicateEntry[] = [];
-  const notRecognized: string[] = [];
-  for (const token of tokens) {
-    const match = token.match(/^(.+?)(?:x(\d+))?$/);
-    if (!match) continue;
-    const code = match[1];
-    const count = match[2] ? parseInt(match[2], 10) : 1;
-    const s = lookupSticker(code);
-    if (s) found.push({ sticker: s, count });
-    else notRecognized.push(token);
+function DuplicatesTab({
+  items,
+  onAdd,
+  onRemove,
+}: {
+  items: DuplicateEntry[];
+  onAdd: (entries: DuplicateEntry[]) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  function handleSave(raw: string) {
+    const tokens = parseRawCodes(raw);
+    const existingIds = new Set(items.map((e) => e.id));
+    const newEntries: DuplicateEntry[] = [];
+    for (const token of tokens) {
+      const match = token.match(/^(.+?)(?:x(\d+))?$/);
+      if (!match) continue;
+      const code = match[1];
+      const count = match[2] ? parseInt(match[2], 10) : 1;
+      const s = lookupSticker(code);
+      if (s && !existingIds.has(s.id)) newEntries.push({ id: s.id, count });
+    }
+    if (newEntries.length > 0) onAdd(newEntries);
+    setPanelOpen(false);
   }
-  const sorted = [...found].sort((a, b) => a.sticker.albumPos - b.sticker.albumPos);
-  const groups = groupBySection(sorted, (e) => e.sticker);
+
+  const resolved = items
+    .map((e) => ({ entry: e, sticker: STICKERS.find((s) => s.id === e.id)! }))
+    .filter((x) => x.sticker)
+    .sort((a, b) => a.sticker.albumPos - b.sticker.albumPos);
+
+  const groups = groupBySection(resolved, (x) => x.sticker);
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Textarea
-          className="font-mono text-sm bg-white/5 border-white/10 placeholder:text-muted-foreground/40 focus-visible:ring-violet-400/50 focus-visible:border-violet-400/30 resize-none h-28 text-foreground"
+    <div>
+      {panelOpen ? (
+        <AddPanel
+          accent="violet"
           placeholder={"ARG17x3, MEX2, FWC5x2\nAppend xN for the count"}
-          value={input}
-          onChange={(e) => onInput(e.target.value)}
+          hint={<>Append <span className="text-violet-300 font-mono">x3</span> for count · e.g. <span className="text-violet-300 font-mono">ARG17x3</span></>}
+          onSave={handleSave}
+          onCancel={() => setPanelOpen(false)}
         />
-        <InputHint>
-          Append <span className="text-violet-300 font-mono">x3</span> for duplicates ·{" "}
-          <span className="text-violet-300 font-mono">ARG17x3</span> = 3 copies
-        </InputHint>
-      </div>
-      {tokens.length === 0 ? (
-        <EmptyState hint="Enter sticker codes above. Add a count suffix like ARG17x3 for 3 duplicates." />
       ) : (
-        <ScrollArea className="max-h-[55vh]">
+        <AddButton accent="violet" onClick={() => setPanelOpen(true)} />
+      )}
+
+      {items.length === 0 ? (
+        <EmptyState hint={'No duplicates yet. Tap "Add stickers" to log your extras.'} />
+      ) : (
+        <ScrollArea className="max-h-[62vh]">
           <div className="pr-1">
             {groups.map(([section, entries]) => (
               <SectionGroup key={section} title={section} count={entries.length}>
-                {entries.map((e) => <StickerRow key={e.sticker.id} sticker={e.sticker} count={e.count} />)}
+                {entries.map(({ entry, sticker }) => (
+                  <StickerRow
+                    key={sticker.id}
+                    sticker={sticker}
+                    count={entry.count}
+                    onRemove={() => onRemove(sticker.id)}
+                  />
+                ))}
               </SectionGroup>
             ))}
-            {notRecognized.length > 0 && <UnknownGroup codes={notRecognized} />}
           </div>
         </ScrollArea>
       )}
@@ -310,41 +416,37 @@ function DuplicatesTab({ input, onInput }: { input: string; onInput: (v: string)
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken]       = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
-  const [missingInput, setMissingInput] = useState("");
-  const [duplicatesInput, setDuplicatesInput] = useState("");
-  const [syncing, setSyncing] = useState(false);
+  const [missing, setMissing]   = useState<Sticker[]>([]);
+  const [dupes, setDupes]       = useState<DuplicateEntry[]>([]);
+  const [syncing, setSyncing]   = useState(false);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Hydrate from localStorage
+  // Hydrate auth from localStorage
   useEffect(() => {
-    const storedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
-    const storedUser = localStorage.getItem(STORAGE_KEY_USERNAME);
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUsername(storedUser);
-    } else {
-      setMissingInput(localStorage.getItem(STORAGE_KEY_MISSING) ?? "");
-      setDuplicatesInput(localStorage.getItem(STORAGE_KEY_DUPLICATES) ?? "");
-    }
+    const t = localStorage.getItem(KEY_TOKEN);
+    const u = localStorage.getItem(KEY_USER);
+    if (t && u) { setToken(t); setUsername(u); }
   }, []);
 
-  // Load cloud data on login
+  // Load cloud data after login
   useEffect(() => {
     if (!token) return;
     fetch("/api/user/data", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((data) => {
-        if (data.missingList !== undefined) setMissingInput(data.missingList);
-        if (data.duplicatesList !== undefined) setDuplicatesInput(data.duplicatesList);
+        const missingIds: string[] = data.missing ?? [];
+        const dupesRaw: DuplicateEntry[] = data.duplicates ?? [];
+        setMissing(missingIds.map((id) => STICKERS.find((s) => s.id === id)!).filter(Boolean));
+        setDupes(dupesRaw);
       })
       .catch(() => {});
   }, [token]);
 
   // Debounced cloud save
   const scheduleSave = useCallback(
-    (missing: string, duplicates: string) => {
+    (m: Sticker[], d: DuplicateEntry[]) => {
       if (!token) return;
       if (syncTimer.current) clearTimeout(syncTimer.current);
       setSyncing(true);
@@ -353,64 +455,66 @@ export default function Home() {
           await fetch("/api/user/data", {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ missingList: missing, duplicatesList: duplicates }),
+            body: JSON.stringify({ missing: m.map((s) => s.id), duplicates: d }),
           });
         } finally {
           setSyncing(false);
         }
-      }, SYNC_DEBOUNCE_MS);
+      }, SYNC_DELAY);
     },
     [token]
   );
 
-  const handleMissingInput = useCallback(
-    (v: string) => {
-      setMissingInput(v);
-      if (token) {
-        scheduleSave(v, duplicatesInput);
-      } else {
-        localStorage.setItem(STORAGE_KEY_MISSING, v);
-      }
-    },
-    [token, duplicatesInput, scheduleSave]
-  );
+  function addMissing(stickers: Sticker[]) {
+    setMissing((prev) => {
+      const next = [...prev, ...stickers];
+      scheduleSave(next, dupes);
+      return next;
+    });
+  }
 
-  const handleDuplicatesInput = useCallback(
-    (v: string) => {
-      setDuplicatesInput(v);
-      if (token) {
-        scheduleSave(missingInput, v);
-      } else {
-        localStorage.setItem(STORAGE_KEY_DUPLICATES, v);
-      }
-    },
-    [token, missingInput, scheduleSave]
-  );
+  function removeMissing(id: string) {
+    setMissing((prev) => {
+      const next = prev.filter((s) => s.id !== id);
+      scheduleSave(next, dupes);
+      return next;
+    });
+  }
+
+  function addDupes(entries: DuplicateEntry[]) {
+    setDupes((prev) => {
+      const next = [...prev, ...entries];
+      scheduleSave(missing, next);
+      return next;
+    });
+  }
+
+  function removeDupe(id: string) {
+    setDupes((prev) => {
+      const next = prev.filter((e) => e.id !== id);
+      scheduleSave(missing, next);
+      return next;
+    });
+  }
 
   function handleAuth(newToken: string, newUsername: string) {
     setToken(newToken);
     setUsername(newUsername);
-    localStorage.setItem(STORAGE_KEY_TOKEN, newToken);
-    localStorage.setItem(STORAGE_KEY_USERNAME, newUsername);
+    localStorage.setItem(KEY_TOKEN, newToken);
+    localStorage.setItem(KEY_USER, newUsername);
   }
 
   function handleLogout() {
-    setToken(null);
-    setUsername(null);
-    setMissingInput("");
-    setDuplicatesInput("");
-    localStorage.removeItem(STORAGE_KEY_TOKEN);
-    localStorage.removeItem(STORAGE_KEY_USERNAME);
-    localStorage.removeItem(STORAGE_KEY_MISSING);
-    localStorage.removeItem(STORAGE_KEY_DUPLICATES);
+    setToken(null); setUsername(null);
+    setMissing([]); setDupes([]);
+    localStorage.removeItem(KEY_TOKEN);
+    localStorage.removeItem(KEY_USER);
   }
 
   return (
     <>
       <Background />
-
       {!token && <AuthModal onAuth={handleAuth} />}
-
       <main className="min-h-screen">
         <div className="max-w-lg mx-auto px-4 pb-10">
           {token && username && (
@@ -424,21 +528,27 @@ export default function Home() {
                 className="flex-1 text-sm font-semibold data-[state=active]:bg-amber-400 data-[state=active]:text-black data-[state=active]:shadow-none transition-all"
               >
                 Missing
+                {missing.length > 0 && (
+                  <span className="ml-1.5 text-xs bg-black/20 px-1.5 py-0.5 rounded-full">{missing.length}</span>
+                )}
               </TabsTrigger>
               <TabsTrigger
                 value="duplicates"
                 className="flex-1 text-sm font-semibold data-[state=active]:bg-violet-500 data-[state=active]:text-white data-[state=active]:shadow-none transition-all"
               >
                 Duplicates
+                {dupes.length > 0 && (
+                  <span className="ml-1.5 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">{dupes.length}</span>
+                )}
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="missing" className="mt-4">
-              <MissingTab input={missingInput} onInput={handleMissingInput} />
+              <MissingTab items={missing} onAdd={addMissing} onRemove={removeMissing} />
             </TabsContent>
 
             <TabsContent value="duplicates" className="mt-4">
-              <DuplicatesTab input={duplicatesInput} onInput={handleDuplicatesInput} />
+              <DuplicatesTab items={dupes} onAdd={addDupes} onRemove={removeDupe} />
             </TabsContent>
           </Tabs>
         </div>
