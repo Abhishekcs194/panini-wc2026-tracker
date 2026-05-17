@@ -32,7 +32,6 @@ export default function AuthModal({ onAuth }: Props) {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
     try {
       const res = await fetch(endpoint, {
@@ -55,90 +54,89 @@ export default function AuthModal({ onAuth }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      {/* backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       <Card className="relative w-full max-w-sm bg-[#0d1535]/95 border-white/10 shadow-2xl">
-        <CardContent className="pt-8 pb-6 px-6">
+        <CardContent className="pt-8 pb-7 px-6">
           {/* logo */}
           <div className="flex flex-col items-center gap-2 mb-7">
-            <TrophySVG className="w-12 h-12 text-amber-400" />
-            <h1 className="text-xl font-bold bg-gradient-to-r from-amber-300 to-yellow-200 bg-clip-text text-transparent">
+            <TrophySVG className="w-14 h-14 text-amber-400" />
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-300 to-yellow-200 bg-clip-text text-transparent">
               Panini WC 2026
             </h1>
-            <p className="text-xs text-muted-foreground tracking-widest uppercase">Sticker Tracker</p>
+            <p className="text-sm text-foreground/50 tracking-widest uppercase">Sticker Tracker</p>
           </div>
 
           {/* mode toggle */}
-          <div className="flex rounded-lg border border-white/10 overflow-hidden mb-6">
+          <div className="flex rounded-xl border border-white/10 overflow-hidden mb-6 h-12">
             <button
               type="button"
               onClick={() => { setMode("login"); setError(""); }}
-              className={`flex-1 py-2 text-sm font-semibold transition-colors ${mode === "login" ? "bg-amber-400 text-black" : "text-muted-foreground hover:text-foreground"}`}
+              className={`flex-1 text-base font-bold transition-colors ${mode === "login" ? "bg-amber-400 text-black" : "text-foreground/50 hover:text-foreground"}`}
             >
               Sign in
             </button>
             <button
               type="button"
               onClick={() => { setMode("register"); setError(""); }}
-              className={`flex-1 py-2 text-sm font-semibold transition-colors ${mode === "register" ? "bg-amber-400 text-black" : "text-muted-foreground hover:text-foreground"}`}
+              className={`flex-1 text-base font-bold transition-colors ${mode === "register" ? "bg-amber-400 text-black" : "text-foreground/50 hover:text-foreground"}`}
             >
               Register
             </button>
           </div>
 
-          <form onSubmit={submit} className="space-y-3">
+          <form onSubmit={submit} className="space-y-4">
             <div>
-              <label className="text-xs text-muted-foreground mb-1.5 block">Username</label>
+              <label className="text-sm font-semibold text-foreground/70 mb-2 block">Username</label>
               <input
                 type="text"
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 placeholder="e.g. panini_king"
-                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400/30"
+                className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3.5 text-base text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400/30"
                 required
               />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground mb-1.5 block">Password</label>
+              <label className="text-sm font-semibold text-foreground/70 mb-2 block">Password</label>
               <input
                 type="password"
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400/30"
+                className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3.5 text-base text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400/30"
                 required
               />
               {mode === "register" && (
-                <p className="text-xs text-muted-foreground mt-1.5">Minimum 6 characters</p>
+                <p className="text-sm text-foreground/40 mt-2">Minimum 6 characters</p>
               )}
             </div>
 
             {error && (
-              <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2">
-                <p className="text-xs text-red-400">{error}</p>
+              <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3">
+                <p className="text-sm font-medium text-red-400">{error}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-1 py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-bold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full mt-2 py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-black font-bold text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
             </button>
           </form>
 
           {mode === "register" && (
-            <p className="text-center text-xs text-muted-foreground mt-4">
+            <p className="text-center text-sm text-foreground/40 mt-4">
               No email needed · just username &amp; password
             </p>
           )}
 
           <div className="flex justify-center mt-5">
-            <Badge variant="outline" className="text-[10px] border-white/10 text-muted-foreground">
+            <Badge variant="outline" className="text-xs border-white/10 text-foreground/40 py-1 px-3">
               980 stickers · FIFA World Cup 2026
             </Badge>
           </div>

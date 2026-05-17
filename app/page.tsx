@@ -114,9 +114,9 @@ function Header({ username, syncing, onLogout }: { username: string; syncing: bo
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
             <SyncDot syncing={syncing} />
-            <span className="text-xs text-foreground/80 font-medium">@{username}</span>
+            <span className="text-sm text-foreground/90 font-semibold">@{username}</span>
           </div>
-          <button onClick={onLogout} className="text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1.5">
+          <button onClick={onLogout} className="text-sm font-medium text-foreground/50 hover:text-foreground transition-colors px-3 py-2 rounded-lg hover:bg-white/5 active:bg-white/10">
             Sign out
           </button>
         </div>
@@ -159,23 +159,23 @@ function AddPanel({
       <CardContent className="pt-3 pb-3 px-3 space-y-2">
         <Textarea
           autoFocus
-          className={`font-mono text-sm bg-white/5 border-white/10 placeholder:text-muted-foreground/40 resize-none h-24 text-foreground ${ring}`}
+          className={`font-mono text-base bg-white/5 border-white/10 placeholder:text-muted-foreground/50 resize-none h-28 text-foreground ${ring}`}
           placeholder={placeholder}
           value={value}
           onChange={(e) => setValue(e.target.value)}
         />
-        <p className="text-xs text-muted-foreground px-0.5">{hint}</p>
+        <p className="text-sm text-foreground/50 px-0.5">{hint}</p>
         <div className="flex gap-2 pt-1">
           <button
             onClick={handleSave}
             disabled={!value.trim()}
-            className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${btn}`}
+            className={`flex-1 py-3 rounded-lg text-base font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${btn}`}
           >
             Save to list
           </button>
           <button
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground transition-colors border border-white/10"
+            className="px-5 py-3 rounded-lg text-base font-semibold text-foreground/60 hover:text-foreground transition-colors border border-white/15 hover:bg-white/5 active:bg-white/10"
           >
             Cancel
           </button>
@@ -197,31 +197,31 @@ function StickerRow({
   onRemove: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 py-2.5 border-b border-white/5 last:border-0 group">
+    <div className="flex items-center gap-2.5 py-3 border-b border-white/8 last:border-0 group">
       <div className="flex items-center gap-1.5 shrink-0">
         {sticker.foil && (
-          <Badge className="text-[10px] px-1.5 py-0 bg-gradient-to-r from-amber-400 to-yellow-300 text-black font-bold border-0">
+          <Badge className="text-xs px-1.5 py-0.5 bg-gradient-to-r from-amber-400 to-yellow-300 text-black font-bold border-0">
             FOIL
           </Badge>
         )}
         {sticker.special && !sticker.foil && (
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-violet-400/50 text-violet-300">
+          <Badge variant="outline" className="text-xs px-1.5 py-0.5 border-violet-400/60 text-violet-200">
             SP
           </Badge>
         )}
       </div>
-      <span className="font-mono text-sm font-bold text-amber-300 shrink-0 min-w-[3.5rem]">
+      <span className="font-mono text-base font-bold text-amber-300 shrink-0 min-w-[4.5rem]">
         {sticker.code}{sticker.num}
       </span>
-      <span className="text-sm text-foreground/90 flex-1 truncate">{sticker.name}</span>
+      <span className="text-base text-foreground flex-1 truncate">{sticker.name}</span>
       {count !== undefined && count > 1 && (
-        <Badge className="bg-violet-500/20 text-violet-300 border border-violet-500/30 text-xs font-bold shrink-0">
+        <Badge className="bg-violet-500/30 text-violet-200 border border-violet-400/40 text-sm font-bold shrink-0">
           ×{count}
         </Badge>
       )}
       <button
         onClick={onRemove}
-        className="ml-1 w-6 h-6 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
+        className="ml-1 w-8 h-8 flex items-center justify-center rounded-full text-foreground/30 hover:text-red-400 hover:bg-red-400/10 active:bg-red-400/20 transition-colors shrink-0"
         aria-label="Remove"
       >
         <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5">
@@ -238,8 +238,8 @@ function SectionGroup({ title, count, children }: { title: string; count: number
   return (
     <div className="mb-3">
       <div className="flex items-center gap-2 mb-1.5 px-1">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{title}</h3>
-        <span className="text-xs text-muted-foreground/60 bg-white/5 px-1.5 py-0.5 rounded-full">{count}</span>
+        <h3 className="text-sm font-bold uppercase tracking-wider text-foreground/60">{title}</h3>
+        <span className="text-xs font-semibold text-foreground/40 bg-white/8 px-1.5 py-0.5 rounded-full">{count}</span>
       </div>
       <Card className="bg-card/60 backdrop-blur-sm border-white/8">
         <CardContent className="px-3 py-0">{children}</CardContent>
@@ -268,7 +268,7 @@ function AddButton({ accent, onClick }: { accent: "amber" | "violet"; onClick: (
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg border border-dashed text-sm font-semibold transition-colors mb-4 ${cls}`}
+      className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-dashed text-base font-bold transition-colors mb-4 ${cls}`}
     >
       <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
         <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -354,7 +354,6 @@ function DuplicatesTab({
 
   function handleSave(raw: string) {
     const tokens = parseRawCodes(raw);
-    const existingIds = new Set(items.map((e) => e.id));
     const newEntries: DuplicateEntry[] = [];
     for (const token of tokens) {
       const match = token.match(/^(.+?)(?:x(\d+))?$/);
@@ -362,7 +361,7 @@ function DuplicatesTab({
       const code = match[1];
       const count = match[2] ? parseInt(match[2], 10) : 1;
       const s = lookupSticker(code);
-      if (s && !existingIds.has(s.id)) newEntries.push({ id: s.id, count });
+      if (s) newEntries.push({ id: s.id, count });
     }
     if (newEntries.length > 0) onAdd(newEntries);
     setPanelOpen(false);
@@ -483,7 +482,12 @@ export default function Home() {
 
   function addDupes(entries: DuplicateEntry[]) {
     setDupes((prev) => {
-      const next = [...prev, ...entries];
+      const next = [...prev];
+      for (const entry of entries) {
+        const existing = next.find((e) => e.id === entry.id);
+        if (existing) existing.count += entry.count;
+        else next.push(entry);
+      }
       scheduleSave(missing, next);
       return next;
     });
@@ -522,23 +526,23 @@ export default function Home() {
           )}
 
           <Tabs defaultValue="missing" className="mt-4">
-            <TabsList className="w-full h-11 bg-white/5 border border-white/10 p-1">
+            <TabsList className="w-full h-13 bg-white/5 border border-white/10 p-1">
               <TabsTrigger
                 value="missing"
-                className="flex-1 text-sm font-semibold data-[state=active]:bg-amber-400 data-[state=active]:text-black data-[state=active]:shadow-none transition-all"
+                className="flex-1 text-base font-bold data-[state=active]:bg-amber-400 data-[state=active]:text-black data-[state=active]:shadow-none transition-all"
               >
                 Missing
                 {missing.length > 0 && (
-                  <span className="ml-1.5 text-xs bg-black/20 px-1.5 py-0.5 rounded-full">{missing.length}</span>
+                  <span className="ml-2 text-sm font-bold bg-black/20 px-2 py-0.5 rounded-full">{missing.length}</span>
                 )}
               </TabsTrigger>
               <TabsTrigger
                 value="duplicates"
-                className="flex-1 text-sm font-semibold data-[state=active]:bg-violet-500 data-[state=active]:text-white data-[state=active]:shadow-none transition-all"
+                className="flex-1 text-base font-bold data-[state=active]:bg-violet-500 data-[state=active]:text-white data-[state=active]:shadow-none transition-all"
               >
                 Duplicates
                 {dupes.length > 0 && (
-                  <span className="ml-1.5 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">{dupes.length}</span>
+                  <span className="ml-2 text-sm font-bold bg-white/20 px-2 py-0.5 rounded-full">{dupes.length}</span>
                 )}
               </TabsTrigger>
             </TabsList>
