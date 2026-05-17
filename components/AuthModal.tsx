@@ -2,21 +2,49 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+
+const WC = { blue: "#2A398D", red: "#E61D25", green: "#3CAC3B", gold: "#F0A500" } as const;
 
 type Mode = "login" | "register";
+interface Props { onAuth: (token: string, username: string) => void; }
 
-interface Props {
-  onAuth: (token: string, username: string) => void;
+type SVGProps = { className?: string; style?: React.CSSProperties };
+function TrophySVG({ className, style }: SVGProps) {
+  return (
+    <svg className={className} style={style} viewBox="0 0 64 80" fill="none">
+      <rect x="14" y="72" width="36" height="5" rx="2.5" fill="currentColor" opacity="0.55"/>
+      <rect x="19" y="66" width="26" height="8" rx="2" fill="currentColor" opacity="0.7"/>
+      <rect x="27" y="53" width="10" height="15" rx="1" fill="currentColor" opacity="0.85"/>
+      <circle cx="32" cy="38" r="16" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="1.6"/>
+      <path d="M16 38 Q24 33 32 38 Q40 43 48 38" stroke="currentColor" strokeWidth="0.9" opacity="0.45" fill="none"/>
+      <ellipse cx="32" cy="38" rx="7" ry="16" stroke="currentColor" strokeWidth="0.9" opacity="0.4" fill="none"/>
+      <path d="M14 42 C10 34 13 24 20 22 C22 21 24 23 25 28 L26 40" fill="currentColor" opacity="0.8"/>
+      <path d="M50 42 C54 34 51 24 44 22 C42 21 40 23 39 28 L38 40" fill="currentColor" opacity="0.8"/>
+      <path d="M25 28 C27 23 29 21 32 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.85"/>
+      <path d="M39 28 C37 23 35 21 32 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.85"/>
+      <circle cx="32" cy="22" r="2.5" fill="currentColor" opacity="0.6"/>
+    </svg>
+  );
 }
 
-function TrophySVG({ className }: { className?: string }) {
+function StarSVG({ className, style }: SVGProps) {
   return (
-    <svg className={className} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M32 4C24 4 18 10 18 18c0 10 8 18 14 22v6h-6v4h24v-4h-6v-6c6-4 14-12 14-22C58 10 52 4 44 4H32z" fill="currentColor" fillOpacity="0.15" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-      <path d="M18 12H8c0 0 0 12 10 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-      <path d="M46 12h10c0 0 0 12-10 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-      <rect x="22" y="52" width="20" height="4" rx="2" fill="currentColor" fillOpacity="0.4" stroke="currentColor" strokeWidth="1.2"/>
+    <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
+    </svg>
+  );
+}
+
+function PaniniBadge() {
+  return (
+    <svg viewBox="0 0 90 28" fill="none" className="h-5 w-auto opacity-70">
+      <rect x="1" y="1" width="88" height="26" rx="4" fill="#1a0a00" stroke="#E61D25" strokeWidth="1.4"/>
+      <rect x="1" y="1" width="6" height="26" rx="4" fill="#E61D25"/>
+      <rect x="5" y="1" width="3" height="26" fill="#E61D25"/>
+      <rect x="80" y="1" width="9" height="26" rx="4" fill="#F0A500"/>
+      <rect x="80" y="1" width="4" height="26" fill="#F0A500"/>
+      <text x="45" y="19" textAnchor="middle" fontFamily="Arial Black, Arial" fontWeight="900" fontSize="13" letterSpacing="2" fill="white">PANINI</text>
+      <text x="12" y="19" textAnchor="middle" fontFamily="Arial" fontSize="11" fill="white">★</text>
     </svg>
   );
 }
@@ -32,19 +60,15 @@ export default function AuthModal({ onAuth }: Props) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
     try {
-      const res = await fetch(endpoint, {
+      const res = await fetch(mode === "login" ? "/api/auth/login" : "/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Something went wrong");
-      } else {
-        onAuth(data.token, data.username);
-      }
+      if (!res.ok) setError(data.error ?? "Something went wrong");
+      else onAuth(data.token, data.username);
     } catch {
       setError("Network error — please try again");
     } finally {
@@ -54,68 +78,76 @@ export default function AuthModal({ onAuth }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
 
-      <Card className="relative w-full max-w-sm bg-[#0d1535]/95 border-white/10 shadow-2xl">
-        <CardContent className="pt-8 pb-7 px-6">
-          {/* logo */}
-          <div className="flex flex-col items-center gap-2 mb-7">
-            <TrophySVG className="w-14 h-14 text-amber-400" />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-amber-300 to-yellow-200 bg-clip-text text-transparent">
-              Panini WC 2026
+      <Card className="relative w-full max-w-sm border shadow-2xl" style={{ background: "#07091C", borderColor: `${WC.blue}44` }}>
+        <CardContent className="pt-7 pb-7 px-6">
+
+          {/* Trophy + title */}
+          <div className="flex flex-col items-center gap-1 mb-6">
+            <TrophySVG className="w-14 h-16" style={{ color: WC.gold }} />
+            <div className="flex gap-1 mb-1">
+              {[0,1,2].map((i) => <StarSVG key={i} className="w-3.5 h-3.5" style={{ color: WC.gold }} />)}
+            </div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-white">
+              Panini <span style={{ color: WC.gold }}>WC 2026</span>
             </h1>
-            <p className="text-sm text-foreground/50 tracking-widest uppercase">Sticker Tracker</p>
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase" style={{ color: `${WC.blue}BB` }}>
+              Sticker Tracker
+            </p>
           </div>
 
-          {/* mode toggle */}
-          <div className="flex rounded-xl border border-white/10 overflow-hidden mb-6 h-12">
-            <button
-              type="button"
-              onClick={() => { setMode("login"); setError(""); }}
-              className={`flex-1 text-base font-bold transition-colors ${mode === "login" ? "bg-amber-400 text-black" : "text-foreground/50 hover:text-foreground"}`}
-            >
-              Sign in
-            </button>
-            <button
-              type="button"
-              onClick={() => { setMode("register"); setError(""); }}
-              className={`flex-1 text-base font-bold transition-colors ${mode === "register" ? "bg-amber-400 text-black" : "text-foreground/50 hover:text-foreground"}`}
-            >
-              Register
-            </button>
+          {/* Host nations bar */}
+          <div className="flex h-0.5 rounded-full overflow-hidden gap-px mb-6">
+            <div className="flex-1 rounded-l-full" style={{ background: WC.blue }} />
+            <div className="flex-1" style={{ background: WC.green }} />
+            <div className="flex-1 rounded-r-full" style={{ background: WC.red }} />
+          </div>
+
+          {/* Mode toggle */}
+          <div className="flex rounded-xl overflow-hidden mb-5 border" style={{ borderColor: `${WC.blue}44` }}>
+            {(["login", "register"] as Mode[]).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => { setMode(m); setError(""); }}
+                className="flex-1 h-11 text-base font-bold capitalize transition-colors"
+                style={{
+                  background: mode === m ? WC.blue : "transparent",
+                  color: mode === m ? "white" : "rgba(255,255,255,0.4)",
+                }}
+              >
+                {m === "login" ? "Sign in" : "Register"}
+              </button>
+            ))}
           </div>
 
           <form onSubmit={submit} className="space-y-4">
-            <div>
-              <label className="text-sm font-semibold text-foreground/70 mb-2 block">Username</label>
-              <input
-                type="text"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. panini_king"
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3.5 text-base text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400/30"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-foreground/70 mb-2 block">Password</label>
-              <input
-                type="password"
-                autoComplete={mode === "login" ? "current-password" : "new-password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3.5 text-base text-foreground placeholder:text-foreground/30 focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400/30"
-                required
-              />
-              {mode === "register" && (
-                <p className="text-sm text-foreground/40 mt-2">Minimum 6 characters</p>
-              )}
-            </div>
+            {[
+              { label: "Username", type: "text", autoComplete: "username", value: username, set: setUsername, placeholder: "e.g. panini_king" },
+              { label: "Password", type: "password", autoComplete: mode === "login" ? "current-password" : "new-password", value: password, set: setPassword, placeholder: "••••••••" },
+            ].map(({ label, type, autoComplete, value, set, placeholder }) => (
+              <div key={label}>
+                <label className="text-sm font-semibold text-white/60 mb-2 block">{label}</label>
+                <input
+                  type={type}
+                  autoComplete={autoComplete}
+                  value={value}
+                  onChange={(e) => set(e.target.value)}
+                  placeholder={placeholder}
+                  className="w-full rounded-xl px-4 py-3.5 text-base text-white placeholder:text-white/25 focus:outline-none border transition-colors"
+                  style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
+                  required
+                />
+              </div>
+            ))}
+
+            {mode === "register" && (
+              <p className="text-sm text-white/35">Minimum 6 characters · no email needed</p>
+            )}
 
             {error && (
-              <div className="rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3">
+              <div className="rounded-xl px-4 py-3 border" style={{ background: `${WC.red}15`, borderColor: `${WC.red}40` }}>
                 <p className="text-sm font-medium text-red-400">{error}</p>
               </div>
             )}
@@ -123,22 +155,17 @@ export default function AuthModal({ onAuth }: Props) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full mt-2 py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 active:bg-amber-500 text-black font-bold text-base transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 rounded-xl text-base font-bold text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed mt-1"
+              style={{ background: WC.blue }}
             >
-              {loading ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}
+              {loading ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}
             </button>
           </form>
 
-          {mode === "register" && (
-            <p className="text-center text-sm text-foreground/40 mt-4">
-              No email needed · just username &amp; password
-            </p>
-          )}
-
-          <div className="flex justify-center mt-5">
-            <Badge variant="outline" className="text-xs border-white/10 text-foreground/40 py-1 px-3">
-              980 stickers · FIFA World Cup 2026
-            </Badge>
+          {/* Panini homage */}
+          <div className="flex flex-col items-center gap-1.5 mt-5">
+            <p className="text-xs text-white/20 tracking-wider">Official sticker collection by</p>
+            <PaniniBadge />
           </div>
         </CardContent>
       </Card>

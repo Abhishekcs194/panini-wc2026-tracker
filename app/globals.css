@@ -46,41 +46,57 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* FIFA World Cup 2026 official palette */
+  --wc-blue:  #2A398D;
+  --wc-red:   #E61D25;
+  --wc-green: #3CAC3B;
+  --wc-gold:  #F0A500;
 }
 
 :root {
-  --background: oklch(0.08 0.02 260);
+  /* Base surfaces — deep WC-blue tinted dark */
+  --background: oklch(0.07 0.03 265);
   --foreground: oklch(0.97 0 0);
-  --card: oklch(0.13 0.025 255);
+  --card: oklch(0.11 0.035 265);
   --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.13 0.025 255);
+  --popover: oklch(0.11 0.035 265);
   --popover-foreground: oklch(0.97 0 0);
-  --primary: oklch(0.75 0.18 52);
-  --primary-foreground: oklch(0.1 0 0);
-  --secondary: oklch(0.18 0.03 255);
+
+  /* Primary = WC Blue #2A398D */
+  --primary: oklch(0.38 0.17 265);
+  --primary-foreground: oklch(0.97 0 0);
+
+  --secondary: oklch(0.16 0.04 265);
   --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.18 0.025 255);
-  --muted-foreground: oklch(0.65 0.04 255);
-  --accent: oklch(0.22 0.04 255);
+  --muted: oklch(0.16 0.03 265);
+  --muted-foreground: oklch(0.62 0.04 265);
+  --accent: oklch(0.20 0.04 265);
   --accent-foreground: oklch(0.97 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+
+  /* Destructive = WC Red #E61D25 */
+  --destructive: oklch(0.53 0.23 25);
+
   --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 8%);
-  --ring: oklch(0.75 0.18 52);
-  --chart-1: oklch(0.75 0.18 52);
-  --chart-2: oklch(0.65 0.2 140);
-  --chart-3: oklch(0.65 0.2 200);
-  --chart-4: oklch(0.7 0.18 300);
-  --chart-5: oklch(0.65 0.22 30);
+  --input:  oklch(1 0 0 / 8%);
+  --ring:   oklch(0.38 0.17 265);
+
+  --chart-1: oklch(0.38 0.17 265);
+  --chart-2: oklch(0.53 0.23 25);
+  --chart-3: oklch(0.60 0.18 145);
+  --chart-4: oklch(0.72 0.17 52);
+  --chart-5: oklch(0.65 0.2 200);
+
   --radius: 0.75rem;
-  --sidebar: oklch(0.12 0.025 255);
+
+  --sidebar: oklch(0.10 0.035 265);
   --sidebar-foreground: oklch(0.97 0 0);
-  --sidebar-primary: oklch(0.75 0.18 52);
-  --sidebar-primary-foreground: oklch(0.1 0 0);
-  --sidebar-accent: oklch(0.18 0.03 255);
+  --sidebar-primary: oklch(0.38 0.17 265);
+  --sidebar-primary-foreground: oklch(0.97 0 0);
+  --sidebar-accent: oklch(0.16 0.04 265);
   --sidebar-accent-foreground: oklch(0.97 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.75 0.18 52);
+  --sidebar-ring: oklch(0.38 0.17 265);
 }
 
 @layer base {
