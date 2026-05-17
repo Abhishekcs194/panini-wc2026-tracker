@@ -495,7 +495,9 @@ export default function Home() {
 
   function removeDupe(id: string) {
     setDupes((prev) => {
-      const next = prev.filter((e) => e.id !== id);
+      const next = prev
+        .map((e) => e.id === id ? { ...e, count: e.count - 1 } : e)
+        .filter((e) => e.count > 0);
       scheduleSave(missing, next);
       return next;
     });
