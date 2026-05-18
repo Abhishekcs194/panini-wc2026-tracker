@@ -742,6 +742,7 @@ export default function Home() {
   const [dupes, setDupes]               = useState<DuplicateEntry[]>([]);
   const [confirmRemove, setConfirmRemove] = useState(true);
   const [syncing, setSyncing]           = useState(false);
+  const [activeTab, setActiveTab]       = useState<"missing" | "duplicates">("missing");
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -835,44 +836,43 @@ export default function Home() {
         <main className="max-w-lg mx-auto">
           {/* Album content area — white sheet */}
           <div className="bg-white mx-3 mt-3 mb-4 rounded-xl shadow-md overflow-hidden">
-            <Tabs defaultValue="missing">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "missing" | "duplicates")}>
               {/* Tab bar */}
               <TabsList
-                className="w-full h-auto p-0 rounded-none border-b"
-                style={{ background: WC.paper, borderColor: "#D6DAE8" }}
+                className="w-full h-auto p-0 rounded-none grid grid-cols-2"
+                style={{ background: WC.paper, borderBottom: `2px solid #D6DAE8` }}
               >
-                <TabsTrigger
-                  value="missing"
-                  className="flex-1 rounded-none py-3 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent data-[state=active]:border-b-[3px] data-[state=active]:shadow-none transition-all"
-                  style={
-                    { "--active-color": WC.blue } as React.CSSProperties
-                  }
-                  data-accent="blue"
-                >
-                  <span>Missing</span>
-                  {missing.length > 0 && (
-                    <span
-                      className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full text-white"
-                      style={{ background: WC.blue }}
+                {(["missing", "duplicates"] as const).map((tab) => {
+                  const active = activeTab === tab;
+                  const color  = tab === "missing" ? WC.blue : WC.red;
+                  const count  = tab === "missing" ? missing.length : dupes.length;
+                  return (
+                    <TabsTrigger
+                      key={tab}
+                      value={tab}
+                      className="relative flex items-center justify-center gap-2 rounded-none py-3 text-sm font-bold uppercase tracking-wider transition-all data-[state=active]:shadow-none"
+                      style={{
+                        background: active ? "#fff" : "transparent",
+                        color: active ? color : "#9CA3B0",
+                        borderBottom: active ? `3px solid ${color}` : "3px solid transparent",
+                        marginBottom: -2,
+                      }}
                     >
-                      {missing.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="duplicates"
-                  className="flex-1 rounded-none py-3 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent data-[state=active]:border-b-[3px] data-[state=active]:shadow-none transition-all"
-                >
-                  <span>Duplicates</span>
-                  {dupes.length > 0 && (
-                    <span
-                      className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full text-white"
-                      style={{ background: WC.red }}
-                    >
-                      {dupes.length}
-                    </span>
-                  )}
-                </TabsTrigger>
+                      {tab === "missing" ? "Missing" : "Duplicates"}
+                      {count > 0 && (
+                        <span
+                          className="text-xs font-bold px-2 py-0.5 rounded-full transition-colors"
+                          style={{
+                            background: active ? color : "#D6DAE8",
+                            color: active ? "#fff" : "#9CA3B0",
+                          }}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
 
               <TabsContent value="missing" className="mt-0 p-4">
