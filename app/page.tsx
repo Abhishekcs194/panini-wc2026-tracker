@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Image from "next/image";
 import { STICKERS, type Sticker } from "@/lib/stickers";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import AuthModal from "@/components/AuthModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -39,14 +38,6 @@ function sectionAccent(section: string): string {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function parseRawCodes(raw: string): string[] {
-  return raw.split(/[\s,\n]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
-}
-
-function lookupSticker(token: string): Sticker | undefined {
-  return STICKERS.find((s) => s.id.toLowerCase() === token);
-}
 
 function groupBySection<T>(items: T[], getSticker: (item: T) => Sticker): [string, T[]][] {
   const map = new Map<string, T[]>();
@@ -138,57 +129,160 @@ function Header({ username, syncing, onLogout }: { username: string; syncing: bo
   );
 }
 
-// ── Add panel ──────────────────────────────────────────────────────────────────
+// ── Sticker picker ─────────────────────────────────────────────────────────────
 
-function AddPanel({
-  accent,
-  placeholder,
-  hint,
-  onSave,
-  onCancel,
-}: {
+function StickerPicker({ accent, onSave, onCancel }: {
   accent: "blue" | "red";
-  placeholder: string;
-  hint: React.ReactNode;
-  onSave: (raw: string) => void;
+  onSave: (stickers: Sticker[]) => void;
   onCancel: () => void;
 }) {
-  const [value, setValue] = useState("");
+  const [prefix, setPrefix] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const color = accent === "blue" ? WC.blue : WC.red;
 
-  function handleSave() {
-    onSave(value);
-    setValue("");
+  const matches = useMemo(() => {
+    const p = prefix.trim().toUpperCase();
+    if (!p) return [];
+    return STICKERS.filter((s) => s.code.toUpperCase() === p).sort((a, b) => {
+      const an = typeof a.num === "number" ? a.num : 999;
+      const bn = typeof b.num === "number" ? b.num : 999;
+      return an - bn;
+    });
+  }, [prefix]);
+
+  const teamName = matches[0]?.section;
+
+  function toggle(sticker: Sticker) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(sticker.id)) next.delete(sticker.id);
+      else next.add(sticker.id);
+      return next;
+    });
   }
+
+  function toggleAll() {
+    if (selected.size === matches.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(matches.map((s) => s.id)));
+    }
+  }
+
+  const selectedStickers = matches.filter((s) => selected.has(s.id));
 
   return (
     <div className="mb-4 rounded-xl border-2 overflow-hidden" style={{ borderColor: color }}>
+      {/* Header */}
       <div className="px-3 py-2" style={{ background: color }}>
         <p className="text-xs font-bold uppercase tracking-widest text-white" style={{ fontFamily: "var(--font-barlow)" }}>
           {accent === "blue" ? "Add Missing Stickers" : "Add Duplicates"}
         </p>
       </div>
-      <div className="bg-white p-3 space-y-2">
-        <Textarea
-          autoFocus
-          className="font-mono text-sm bg-[#F8F9FC] border-[#D6DAE8] placeholder:text-[#9CA3B0] resize-none h-24 text-[#1C1F2E] focus-visible:ring-1 focus-visible:border-[#2A398D]"
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-        />
-        <p className="text-xs text-[#6B7080] px-0.5">{hint}</p>
-        <div className="flex gap-2 pt-1">
+
+      <div className="bg-white p-3 space-y-3">
+        {/* Two-column picker */}
+        <div className="flex gap-3 items-start">
+          {/* Left: team code input */}
+          <div className="w-24 shrink-0 flex flex-col gap-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#6B7080" }}>Team</p>
+            <input
+              autoFocus
+              type="text"
+              value={prefix}
+              onChange={(e) => { setPrefix(e.target.value); setSelected(new Set()); }}
+              placeholder="POR"
+              maxLength={6}
+              className="w-full rounded-lg border-2 px-2 py-3 text-center text-xl font-bold uppercase focus:outline-none transition-colors bg-[#F8F9FC]"
+              style={{
+                borderColor: prefix.trim() ? color : "#D6DAE8",
+                color: WC.ink,
+                fontFamily: "var(--font-mono)",
+              }}
+            />
+            {teamName && (
+              <p className="text-[10px] text-center font-semibold leading-tight mt-0.5" style={{ color }}>
+                {teamName}
+              </p>
+            )}
+          </div>
+
+          {/* Right: number chips */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: "#6B7080" }}>Stickers</p>
+              {matches.length > 0 && (
+                <button
+                  type="button"
+                  onClick={toggleAll}
+                  className="text-[10px] font-bold uppercase tracking-wider transition-colors"
+                  style={{ color }}
+                >
+                  {selected.size === matches.length ? "None" : "All"}
+                </button>
+              )}
+            </div>
+
+            {!prefix.trim() ? (
+              <p className="text-xs pt-2 leading-relaxed" style={{ color: "#BCC0CC" }}>
+                Type a code on the left
+              </p>
+            ) : matches.length === 0 ? (
+              <p className="text-xs pt-2" style={{ color: "#BCC0CC" }}>
+                No stickers found for &ldquo;{prefix.trim().toUpperCase()}&rdquo;
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {matches.map((s) => {
+                  const on = selected.has(s.id);
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => toggle(s)}
+                      className="min-w-[2.25rem] h-9 px-1 rounded-lg text-sm font-bold transition-all active:scale-90 select-none"
+                      style={{
+                        background: on ? color : "#F0F2F7",
+                        color: on ? "#fff" : WC.dark,
+                      }}
+                    >
+                      {s.num}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Selected preview */}
+        {selected.size > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {selectedStickers.map((s) => (
+              <span
+                key={s.id}
+                className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded"
+                style={{ background: `${color}18`, color }}
+              >
+                {s.code}{s.num}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex gap-2">
           <button
-            onClick={handleSave}
-            disabled={!value.trim()}
-            className="flex-1 py-2.5 rounded-lg text-sm font-bold uppercase tracking-wider text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={() => { if (selectedStickers.length > 0) onSave(selectedStickers); }}
+            disabled={selected.size === 0}
+            className="flex-1 py-2.5 rounded-lg text-sm font-bold uppercase tracking-wider text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
             style={{ background: color, fontFamily: "var(--font-barlow)" }}
           >
-            Save to list
+            {selected.size > 0 ? `Add ${selected.size} sticker${selected.size > 1 ? "s" : ""}` : "Select stickers"}
           </button>
           <button
             onClick={onCancel}
-            className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors border text-[#6B7080] hover:text-[#1C1F2E] hover:bg-[#F0F2F7]"
+            className="px-4 py-2.5 rounded-lg text-sm font-semibold border transition-colors text-[#6B7080] hover:text-[#1C1F2E] hover:bg-[#F0F2F7]"
             style={{ borderColor: "#D6DAE8" }}
           >
             Cancel
@@ -447,18 +541,6 @@ function MissingTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain }: 
     setPendingRemove(null);
   }
 
-  function handleSave(raw: string) {
-    const tokens = parseRawCodes(raw);
-    const existingIds = new Set(items.map((s) => s.id));
-    const next: Sticker[] = [];
-    for (const token of tokens) {
-      const s = lookupSticker(token);
-      if (s && !existingIds.has(s.id)) next.push(s);
-    }
-    if (next.length > 0) onAdd(next);
-    setPanelOpen(false);
-  }
-
   const q = query.trim().toLowerCase();
   const filtered = [...items]
     .filter((s) => !q || s.id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || s.section.toLowerCase().includes(q))
@@ -471,11 +553,14 @@ function MissingTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain }: 
         <ConfirmModal sticker={pendingRemove} type="missing" onConfirm={handleConfirm} onCancel={() => setPendingRemove(null)} />
       )}
       {panelOpen ? (
-        <AddPanel
+        <StickerPicker
           accent="blue"
-          placeholder={"FWC1, ARG3, MEX17\nOne code per line or comma-separated"}
-          hint={<>Case-insensitive · e.g. <span className="font-mono font-bold" style={{ color: WC.blue }}>FWC1</span>, <span className="font-mono font-bold" style={{ color: WC.blue }}>arg3</span></>}
-          onSave={handleSave}
+          onSave={(stickers) => {
+            const existingIds = new Set(items.map((s) => s.id));
+            const next = stickers.filter((s) => !existingIds.has(s.id));
+            if (next.length > 0) onAdd(next);
+            setPanelOpen(false);
+          }}
           onCancel={() => setPanelOpen(false)}
         />
       ) : (
@@ -530,19 +615,6 @@ function DuplicatesTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain 
     setPendingRemove(null);
   }
 
-  function handleSave(raw: string) {
-    const tokens = parseRawCodes(raw);
-    const next: DuplicateEntry[] = [];
-    for (const token of tokens) {
-      const match = token.match(/^(.+?)(?:x(\d+))?$/);
-      if (!match) continue;
-      const s = lookupSticker(match[1]);
-      if (s) next.push({ id: s.id, count: match[2] ? parseInt(match[2], 10) : 1 });
-    }
-    if (next.length > 0) onAdd(next);
-    setPanelOpen(false);
-  }
-
   const q = query.trim().toLowerCase();
   const resolved = items
     .map((e) => ({ entry: e, sticker: STICKERS.find((s) => s.id === e.id)! }))
@@ -557,11 +629,12 @@ function DuplicatesTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain 
         <ConfirmModal sticker={pendingRemove} type="duplicate" onConfirm={handleConfirm} onCancel={() => setPendingRemove(null)} />
       )}
       {panelOpen ? (
-        <AddPanel
+        <StickerPicker
           accent="red"
-          placeholder={"ARG17x3, MEX2, FWC5x2\nAppend xN for the count"}
-          hint={<>Append <span className="font-mono font-bold" style={{ color: WC.red }}>x3</span> for count · e.g. <span className="font-mono font-bold" style={{ color: WC.red }}>ARG17x3</span></>}
-          onSave={handleSave}
+          onSave={(stickers) => {
+            onAdd(stickers.map((s) => ({ id: s.id, count: 1 })));
+            setPanelOpen(false);
+          }}
           onCancel={() => setPanelOpen(false)}
         />
       ) : (
