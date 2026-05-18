@@ -417,6 +417,69 @@ function SectionGroup({ title, count, children }: { title: string; count: number
   );
 }
 
+// ── Confirm modal ──────────────────────────────────────────────────────────────
+
+function ConfirmModal({
+  sticker,
+  type,
+  onConfirm,
+  onCancel,
+}: {
+  sticker: Sticker;
+  type: "missing" | "duplicate";
+  onConfirm: (neverAsk: boolean) => void;
+  onCancel: () => void;
+}) {
+  const [neverAsk, setNeverAsk] = useState(false);
+  const color = type === "missing" ? WC.blue : WC.red;
+  const message = type === "missing"
+    ? "Did you receive this sticker? Confirming will remove it from your missing list."
+    : "Remove this sticker from your duplicates list?";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
+      <Card className="relative z-10 w-full max-w-sm border" style={{ background: "#0b1028", borderColor: `${color}55` }}>
+        <CardContent className="pt-5 pb-4 px-4 space-y-4">
+          <div>
+            <span className="font-mono text-lg font-bold" style={{ color: WC.gold }}>
+              {sticker.code}{sticker.num}
+            </span>
+            <p className="text-sm text-white/70 mt-0.5">{sticker.name}</p>
+          </div>
+          <p className="text-sm text-white/55 leading-relaxed">{message}</p>
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={neverAsk}
+              onChange={(e) => setNeverAsk(e.target.checked)}
+              className="w-4 h-4 rounded cursor-pointer"
+              style={{ accentColor: color }}
+            />
+            <span className="text-xs text-white/40">Never ask me to confirm again</span>
+          </label>
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={onCancel}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border text-white/50 hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors"
+              style={{ borderColor: "rgba(255,255,255,0.12)" }}
+            >
+              Keep
+            </button>
+            <button
+              onClick={() => onConfirm(neverAsk)}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-colors active:opacity-80"
+              style={{ background: color }}
+            >
+              Remove
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ── Empty state ────────────────────────────────────────────────────────────────
 
 function EmptyState({ hint }: { hint: string }) {
@@ -430,9 +493,27 @@ function EmptyState({ hint }: { hint: string }) {
 
 // ── Missing tab ────────────────────────────────────────────────────────────────
 
-function MissingTab({ items, onAdd, onRemove }: { items: Sticker[]; onAdd: (s: Sticker[]) => void; onRemove: (id: string) => void }) {
+function MissingTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain }: {
+  items: Sticker[];
+  onAdd: (s: Sticker[]) => void;
+  onRemove: (id: string) => void;
+  confirmRemove: boolean;
+  onNeverAskAgain: () => void;
+}) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [pendingRemove, setPendingRemove] = useState<Sticker | null>(null);
+
+  function handleRemoveClick(sticker: Sticker) {
+    if (confirmRemove) { setPendingRemove(sticker); } else { onRemove(sticker.id); }
+  }
+
+  function handleConfirm(neverAsk: boolean) {
+    if (!pendingRemove) return;
+    onRemove(pendingRemove.id);
+    if (neverAsk) onNeverAskAgain();
+    setPendingRemove(null);
+  }
 
   function handleSave(raw: string) {
     const tokens = parseRawCodes(raw);
@@ -454,6 +535,14 @@ function MissingTab({ items, onAdd, onRemove }: { items: Sticker[]; onAdd: (s: S
 
   return (
     <div>
+      {pendingRemove && (
+        <ConfirmModal
+          sticker={pendingRemove}
+          type="missing"
+          onConfirm={handleConfirm}
+          onCancel={() => setPendingRemove(null)}
+        />
+      )}
       {panelOpen ? (
         <AddPanel
           accent="blue"
@@ -478,7 +567,7 @@ function MissingTab({ items, onAdd, onRemove }: { items: Sticker[]; onAdd: (s: S
               <div className="pr-1">
                 {groups.map(([section, stickers]) => (
                   <SectionGroup key={section} title={section} count={stickers.length}>
-                    {stickers.map((s) => <StickerRow key={s.id} sticker={s} onRemove={() => onRemove(s.id)} />)}
+                    {stickers.map((s) => <StickerRow key={s.id} sticker={s} onRemove={() => handleRemoveClick(s)} />)}
                   </SectionGroup>
                 ))}
               </div>
@@ -492,9 +581,27 @@ function MissingTab({ items, onAdd, onRemove }: { items: Sticker[]; onAdd: (s: S
 
 // ── Duplicates tab ─────────────────────────────────────────────────────────────
 
-function DuplicatesTab({ items, onAdd, onRemove }: { items: DuplicateEntry[]; onAdd: (e: DuplicateEntry[]) => void; onRemove: (id: string) => void }) {
+function DuplicatesTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain }: {
+  items: DuplicateEntry[];
+  onAdd: (e: DuplicateEntry[]) => void;
+  onRemove: (id: string) => void;
+  confirmRemove: boolean;
+  onNeverAskAgain: () => void;
+}) {
   const [panelOpen, setPanelOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [pendingRemove, setPendingRemove] = useState<Sticker | null>(null);
+
+  function handleRemoveClick(sticker: Sticker) {
+    if (confirmRemove) { setPendingRemove(sticker); } else { onRemove(sticker.id); }
+  }
+
+  function handleConfirm(neverAsk: boolean) {
+    if (!pendingRemove) return;
+    onRemove(pendingRemove.id);
+    if (neverAsk) onNeverAskAgain();
+    setPendingRemove(null);
+  }
 
   function handleSave(raw: string) {
     const tokens = parseRawCodes(raw);
@@ -519,6 +626,14 @@ function DuplicatesTab({ items, onAdd, onRemove }: { items: DuplicateEntry[]; on
 
   return (
     <div>
+      {pendingRemove && (
+        <ConfirmModal
+          sticker={pendingRemove}
+          type="duplicate"
+          onConfirm={handleConfirm}
+          onCancel={() => setPendingRemove(null)}
+        />
+      )}
       {panelOpen ? (
         <AddPanel
           accent="red"
@@ -544,7 +659,7 @@ function DuplicatesTab({ items, onAdd, onRemove }: { items: DuplicateEntry[]; on
                 {groups.map(([section, entries]) => (
                   <SectionGroup key={section} title={section} count={entries.length}>
                     {entries.map(({ entry, sticker }) => (
-                      <StickerRow key={sticker.id} sticker={sticker} count={entry.count} onRemove={() => onRemove(sticker.id)} />
+                      <StickerRow key={sticker.id} sticker={sticker} count={entry.count} onRemove={() => handleRemoveClick(sticker)} />
                     ))}
                   </SectionGroup>
                 ))}
@@ -560,11 +675,12 @@ function DuplicatesTab({ items, onAdd, onRemove }: { items: DuplicateEntry[]; on
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [token, setToken]     = useState<string | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
-  const [missing, setMissing] = useState<Sticker[]>([]);
-  const [dupes, setDupes]     = useState<DuplicateEntry[]>([]);
-  const [syncing, setSyncing] = useState(false);
+  const [token, setToken]           = useState<string | null>(null);
+  const [username, setUsername]     = useState<string | null>(null);
+  const [missing, setMissing]       = useState<Sticker[]>([]);
+  const [dupes, setDupes]           = useState<DuplicateEntry[]>([]);
+  const [confirmRemove, setConfirmRemove] = useState(true);
+  const [syncing, setSyncing]       = useState(false);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -582,6 +698,7 @@ export default function Home() {
         const dupesRaw: DuplicateEntry[] = data.duplicates ?? [];
         setMissing(missingIds.map((id) => STICKERS.find((s) => s.id.toLowerCase() === id.toLowerCase())!).filter(Boolean));
         setDupes(dupesRaw);
+        setConfirmRemove(data.confirmRemove !== false);
       })
       .catch(() => {});
   }, [token]);
@@ -623,6 +740,16 @@ export default function Home() {
       const next = prev.map((e) => e.id === id ? { ...e, count: e.count - 1 } : e).filter((e) => e.count > 0);
       scheduleSave(missing, next);
       return next;
+    });
+  }
+
+  function handleNeverAskAgain() {
+    setConfirmRemove(false);
+    if (!token) return;
+    fetch("/api/user/data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ confirmRemove: false }),
     });
   }
 
@@ -671,10 +798,10 @@ export default function Home() {
             </TabsList>
 
             <TabsContent value="missing" className="mt-4">
-              <MissingTab items={missing} onAdd={addMissing} onRemove={removeMissing} />
+              <MissingTab items={missing} onAdd={addMissing} onRemove={removeMissing} confirmRemove={confirmRemove} onNeverAskAgain={handleNeverAskAgain} />
             </TabsContent>
             <TabsContent value="duplicates" className="mt-4">
-              <DuplicatesTab items={dupes} onAdd={addDupes} onRemove={removeDupe} />
+              <DuplicatesTab items={dupes} onAdd={addDupes} onRemove={removeDupe} confirmRemove={confirmRemove} onNeverAskAgain={handleNeverAskAgain} />
             </TabsContent>
           </Tabs>
 

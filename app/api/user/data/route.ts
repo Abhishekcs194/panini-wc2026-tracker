@@ -20,6 +20,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     missing,
     duplicates: user.duplicates ?? [],
+    confirmRemove: user.confirmRemove !== false,
   });
 }
 
@@ -28,12 +29,16 @@ export async function POST(req: Request) {
   const payload = token ? await verifyToken(token) : null;
   if (!payload) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { missing, duplicates } = await req.json();
+  const body = await req.json();
+  const $set: Record<string, unknown> = { updatedAt: new Date() };
+  if ("missing" in body) $set.missing = body.missing ?? [];
+  if ("duplicates" in body) $set.duplicates = body.duplicates ?? [];
+  if ("confirmRemove" in body) $set.confirmRemove = body.confirmRemove;
 
   const client = await clientPromise;
   await client.db("panini").collection("users").updateOne(
     { username: payload.username },
-    { $set: { missing: missing ?? [], duplicates: duplicates ?? [], updatedAt: new Date() } }
+    { $set }
   );
 
   return NextResponse.json({ ok: true });
