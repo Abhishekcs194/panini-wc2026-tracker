@@ -1,53 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import Image from "next/image";
 
-const WC = { blue: "#2A398D", red: "#E61D25", green: "#3CAC3B", gold: "#F0A500" } as const;
+const WC = {
+  blue:  "#2A398D",
+  red:   "#E61D25",
+  green: "#3CAC3B",
+  ink:   "#1C1F2E",
+  paper: "#EEF0F7",
+} as const;
 
 type Mode = "login" | "register";
 interface Props { onAuth: (token: string, username: string) => void; }
-
-type SVGProps = { className?: string; style?: React.CSSProperties };
-function TrophySVG({ className, style }: SVGProps) {
-  return (
-    <svg className={className} style={style} viewBox="0 0 64 80" fill="none">
-      <rect x="14" y="72" width="36" height="5" rx="2.5" fill="currentColor" opacity="0.55"/>
-      <rect x="19" y="66" width="26" height="8" rx="2" fill="currentColor" opacity="0.7"/>
-      <rect x="27" y="53" width="10" height="15" rx="1" fill="currentColor" opacity="0.85"/>
-      <circle cx="32" cy="38" r="16" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="1.6"/>
-      <path d="M16 38 Q24 33 32 38 Q40 43 48 38" stroke="currentColor" strokeWidth="0.9" opacity="0.45" fill="none"/>
-      <ellipse cx="32" cy="38" rx="7" ry="16" stroke="currentColor" strokeWidth="0.9" opacity="0.4" fill="none"/>
-      <path d="M14 42 C10 34 13 24 20 22 C22 21 24 23 25 28 L26 40" fill="currentColor" opacity="0.8"/>
-      <path d="M50 42 C54 34 51 24 44 22 C42 21 40 23 39 28 L38 40" fill="currentColor" opacity="0.8"/>
-      <path d="M25 28 C27 23 29 21 32 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.85"/>
-      <path d="M39 28 C37 23 35 21 32 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.85"/>
-      <circle cx="32" cy="22" r="2.5" fill="currentColor" opacity="0.6"/>
-    </svg>
-  );
-}
-
-function StarSVG({ className, style }: SVGProps) {
-  return (
-    <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-    </svg>
-  );
-}
-
-function PaniniBadge() {
-  return (
-    <svg viewBox="0 0 90 28" fill="none" className="h-5 w-auto opacity-70">
-      <rect x="1" y="1" width="88" height="26" rx="4" fill="#1a0a00" stroke="#E61D25" strokeWidth="1.4"/>
-      <rect x="1" y="1" width="6" height="26" rx="4" fill="#E61D25"/>
-      <rect x="5" y="1" width="3" height="26" fill="#E61D25"/>
-      <rect x="80" y="1" width="9" height="26" rx="4" fill="#F0A500"/>
-      <rect x="80" y="1" width="4" height="26" fill="#F0A500"/>
-      <text x="45" y="19" textAnchor="middle" fontFamily="Arial Black, Arial" fontWeight="900" fontSize="13" letterSpacing="2" fill="white">PANINI</text>
-      <text x="12" y="19" textAnchor="middle" fontFamily="Arial" fontSize="11" fill="white">★</text>
-    </svg>
-  );
-}
 
 export default function AuthModal({ onAuth }: Props) {
   const [mode, setMode] = useState<Mode>("login");
@@ -77,44 +42,56 @@ export default function AuthModal({ onAuth }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      {/* Backdrop — show the paper background behind */}
+      <div className="absolute inset-0" style={{ background: WC.paper }} />
 
-      <Card className="relative w-full max-w-sm border shadow-2xl" style={{ background: "#07091C", borderColor: `${WC.blue}44` }}>
-        <CardContent className="pt-7 pb-7 px-6">
+      {/* Modal card */}
+      <div className="relative w-full sm:max-w-sm sm:rounded-2xl overflow-hidden shadow-2xl" style={{ background: "#fff" }}>
 
-          {/* Trophy + title */}
-          <div className="flex flex-col items-center gap-1 mb-6">
-            <TrophySVG className="w-14 h-16" style={{ color: WC.gold }} />
-            <div className="flex gap-1 mb-1">
-              {[0,1,2].map((i) => <StarSVG key={i} className="w-3.5 h-3.5" style={{ color: WC.gold }} />)}
+        {/* ── Blue header ── */}
+        <div style={{ background: WC.blue }}>
+          {/* Logo row */}
+          <div className="flex items-center gap-3 px-5 pt-5 pb-3">
+            <div style={{ mixBlendMode: "screen" }}>
+              <Image src="/wc2026-logo-new.png" alt="FIFA World Cup 2026" width={64} height={64} className="object-contain" />
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-white">
-              Panini <span style={{ color: WC.gold }}>WC 2026</span>
-            </h1>
-            <p className="text-xs font-semibold tracking-[0.2em] uppercase" style={{ color: `${WC.blue}BB` }}>
-              Sticker Tracker
-            </p>
+            <div>
+              <p
+                className="text-2xl font-bold uppercase leading-tight text-white"
+                style={{ fontFamily: "var(--font-barlow), var(--font-inter)" }}
+              >
+                Sticker Tracker
+              </p>
+              <p className="text-[11px] font-semibold tracking-[0.2em] uppercase" style={{ color: "rgba(209,212,209,0.7)" }}>
+                Panini · FIFA World Cup 2026
+              </p>
+            </div>
           </div>
 
           {/* Host nations bar */}
-          <div className="flex h-0.5 rounded-full overflow-hidden gap-px mb-6">
-            <div className="flex-1 rounded-l-full" style={{ background: WC.blue }} />
+          <div className="flex h-[3px]">
+            <div className="flex-1" style={{ background: "#002868" }} />
             <div className="flex-1" style={{ background: WC.green }} />
-            <div className="flex-1 rounded-r-full" style={{ background: WC.red }} />
+            <div className="flex-1" style={{ background: WC.red }} />
           </div>
+        </div>
+
+        {/* ── Form body ── */}
+        <div className="px-5 py-5" style={{ background: WC.paper }}>
 
           {/* Mode toggle */}
-          <div className="flex rounded-xl overflow-hidden mb-5 border" style={{ borderColor: `${WC.blue}44` }}>
+          <div className="flex rounded-lg overflow-hidden mb-5 border" style={{ borderColor: "#D6DAE8" }}>
             {(["login", "register"] as Mode[]).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => { setMode(m); setError(""); }}
-                className="flex-1 h-11 text-base font-bold capitalize transition-colors"
+                className="flex-1 py-2.5 text-sm font-bold uppercase tracking-wider transition-colors"
                 style={{
                   background: mode === m ? WC.blue : "transparent",
-                  color: mode === m ? "white" : "rgba(255,255,255,0.4)",
+                  color: mode === m ? "#fff" : "#9CA3B0",
+                  fontFamily: "var(--font-barlow), var(--font-inter)",
                 }}
               >
                 {m === "login" ? "Sign in" : "Register"}
@@ -128,47 +105,57 @@ export default function AuthModal({ onAuth }: Props) {
               { label: "Password", type: "password", autoComplete: mode === "login" ? "current-password" : "new-password", value: password, set: setPassword, placeholder: "••••••••" },
             ].map(({ label, type, autoComplete, value, set, placeholder }) => (
               <div key={label}>
-                <label className="text-sm font-semibold text-white/60 mb-2 block">{label}</label>
+                <label className="text-xs font-bold uppercase tracking-wider mb-1.5 block" style={{ color: "#6B7080" }}>
+                  {label}
+                </label>
                 <input
                   type={type}
                   autoComplete={autoComplete}
                   value={value}
                   onChange={(e) => set(e.target.value)}
                   placeholder={placeholder}
-                  className="w-full rounded-xl px-4 py-3.5 text-base text-white placeholder:text-white/25 focus:outline-none border transition-colors"
-                  style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }}
+                  className="w-full rounded-lg px-4 py-3 text-sm focus:outline-none border-2 transition-colors bg-white"
+                  style={{
+                    borderColor: "#D6DAE8",
+                    color: WC.ink,
+                  }}
+                  onFocus={e => (e.currentTarget.style.borderColor = WC.blue)}
+                  onBlur={e => (e.currentTarget.style.borderColor = "#D6DAE8")}
                   required
                 />
               </div>
             ))}
 
             {mode === "register" && (
-              <p className="text-sm text-white/35">Minimum 6 characters · no email needed</p>
+              <p className="text-xs" style={{ color: "#9CA3B0" }}>Minimum 6 characters · no email needed</p>
             )}
 
             {error && (
-              <div className="rounded-xl px-4 py-3 border" style={{ background: `${WC.red}15`, borderColor: `${WC.red}40` }}>
-                <p className="text-sm font-medium text-red-400">{error}</p>
+              <div className="rounded-lg px-4 py-3 border" style={{ background: `${WC.red}10`, borderColor: `${WC.red}30` }}>
+                <p className="text-sm font-medium" style={{ color: WC.red }}>{error}</p>
               </div>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 rounded-xl text-base font-bold text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed mt-1"
-              style={{ background: WC.blue }}
+              className="w-full py-3 rounded-lg text-sm font-bold uppercase tracking-widest text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: WC.red, fontFamily: "var(--font-barlow), var(--font-inter)" }}
             >
               {loading ? "Please wait..." : mode === "login" ? "Sign in" : "Create account"}
             </button>
           </form>
 
-          {/* Panini homage */}
-          <div className="flex flex-col items-center gap-1.5 mt-5">
-            <p className="text-xs text-white/20 tracking-wider">Official sticker collection by</p>
-            <PaniniBadge />
+          {/* Footer */}
+          <div className="flex items-center justify-center gap-2 mt-5">
+            <span className="text-[10px] tracking-widest uppercase" style={{ color: "#BCC0CC" }}>Official collection by</span>
+            <div className="rounded overflow-hidden opacity-60">
+              <Image src="/panini-logo.png" alt="Panini" width={48} height={12} className="object-contain" style={{ height: "auto" }} />
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+      </div>
     </div>
   );
 }

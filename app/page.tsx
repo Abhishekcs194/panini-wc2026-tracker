@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { STICKERS, type Sticker } from "@/lib/stickers";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,13 +20,24 @@ const KEY_TOKEN  = "panini_token";
 const KEY_USER   = "panini_username";
 const SYNC_DELAY = 1200;
 
-// Official FIFA World Cup 2026 palette
+// Official FIFA World Cup 2026 palette (United 2026 bid)
 const WC = {
   blue:  "#2A398D",
   red:   "#E61D25",
   green: "#3CAC3B",
+  gray:  "#D1D4D1",
+  dark:  "#474A4A",
   gold:  "#F0A500",
+  paper: "#EEF0F7",
+  ink:   "#1C1F2E",
 } as const;
+
+// Cycles section headers through WC brand colors for visual variety
+const SECTION_PALETTE = [WC.blue, WC.red, WC.green, "#7B3FA0", "#D97706", "#0891B2", "#BE185D"];
+function sectionAccent(section: string): string {
+  const hash = section.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return SECTION_PALETTE[hash % SECTION_PALETTE.length];
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -47,195 +59,81 @@ function groupBySection<T>(items: T[], getSticker: (item: T) => Sticker): [strin
   return Array.from(map.entries());
 }
 
-// ── SVG Illustrations ─────────────────────────────────────────────────────────
+// ── Sync indicator ─────────────────────────────────────────────────────────────
 
-type SVGProps = { className?: string; style?: React.CSSProperties };
-
-/** FIFA World Cup Trophy — two figures holding the globe */
-function TrophySVG({ className, style }: SVGProps) {
+function SyncDot({ syncing }: { syncing: boolean }) {
   return (
-    <svg className={className} style={style} viewBox="0 0 64 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Base plates */}
-      <rect x="14" y="72" width="36" height="5" rx="2.5" fill="currentColor" opacity="0.55"/>
-      <rect x="19" y="66" width="26" height="8" rx="2" fill="currentColor" opacity="0.7"/>
-      {/* Stem */}
-      <rect x="27" y="53" width="10" height="15" rx="1" fill="currentColor" opacity="0.85"/>
-      {/* Globe */}
-      <circle cx="32" cy="38" r="16" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="1.6"/>
-      {/* Globe latitude line */}
-      <path d="M16 38 Q24 33 32 38 Q40 43 48 38" stroke="currentColor" strokeWidth="0.9" opacity="0.45" fill="none"/>
-      {/* Globe longitude arc */}
-      <ellipse cx="32" cy="38" rx="7" ry="16" stroke="currentColor" strokeWidth="0.9" opacity="0.4" fill="none"/>
-      {/* Left figure */}
-      <path d="M14 42 C10 34 13 24 20 22 C22 21 24 23 25 28 L26 40" fill="currentColor" opacity="0.8"/>
-      {/* Right figure */}
-      <path d="M50 42 C54 34 51 24 44 22 C42 21 40 23 39 28 L38 40" fill="currentColor" opacity="0.8"/>
-      {/* Arms reaching up */}
-      <path d="M25 28 C27 23 29 21 32 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.85"/>
-      <path d="M39 28 C37 23 35 21 32 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" opacity="0.85"/>
-      {/* Hands at top of globe */}
-      <circle cx="32" cy="22" r="2.5" fill="currentColor" opacity="0.6"/>
-    </svg>
-  );
-}
-
-/** Adidas Conext25 — the official WC2026 match ball, geometric panels */
-function BallSVG({ className, style }: SVGProps) {
-  return (
-    <svg className={className} style={style} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="1.4" fill="currentColor" fillOpacity="0.06"/>
-      {/* Central pentagon */}
-      <polygon points="32,18 41,25 38,36 26,36 23,25" fill="currentColor" fillOpacity="0.22" stroke="currentColor" strokeWidth="0.9"/>
-      {/* Top panel */}
-      <path d="M32 4 L41 25 L32 18 L23 25 Z" fill="currentColor" fillOpacity="0.12" stroke="currentColor" strokeWidth="0.8"/>
-      {/* Top-right panel */}
-      <path d="M41 25 L58 22 L54 38 L38 36 Z" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="0.8"/>
-      {/* Bottom-right panel */}
-      <path d="M38 36 L54 38 L44 56 L28 48 Z" fill="currentColor" fillOpacity="0.14" stroke="currentColor" strokeWidth="0.8"/>
-      {/* Bottom-left panel */}
-      <path d="M26 36 L28 48 L20 56 L10 38 Z" fill="currentColor" fillOpacity="0.1" stroke="currentColor" strokeWidth="0.8"/>
-      {/* Top-left panel */}
-      <path d="M23 25 L6 22 L10 38 L26 36 Z" fill="currentColor" fillOpacity="0.14" stroke="currentColor" strokeWidth="0.8"/>
-      {/* Top seam */}
-      <path d="M32 18 L32 4" stroke="currentColor" strokeWidth="0.8" strokeLinecap="round" opacity="0.5"/>
-    </svg>
-  );
-}
-
-/** WC2026 "26 ★" mark — stylized numeral badge */
-function WC26SVG({ className, style }: SVGProps) {
-  return (
-    <svg className={className} style={style} viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Outer ring */}
-      <circle cx="28" cy="28" r="26" stroke="currentColor" strokeWidth="1.2" opacity="0.3"/>
-      {/* Star */}
-      <path d="M28 8 L29.8 14H36L31 17.5 L32.8 23.5 L28 20 L23.2 23.5 L25 17.5 L20 14 H26.2Z" fill="currentColor" opacity="0.9"/>
-      {/* "26" rendered as bold stroked paths */}
-      {/* "2" */}
-      <path d="M10 29 C10 24 13 22 17 22 C21 22 24 24 24 28 C24 32 20 34 16 38 L10 38" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-      {/* "6" */}
-      <path d="M46 26 C46 22 43 20 39 20 C35 20 32 22 32 26 L32 38 C32 42 35 44 39 44 C43 44 46 42 46 38 C46 34 43 32 39 32 C35 32 32 34 32 38" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-    </svg>
-  );
-}
-
-/** Five-pointed star */
-function StarSVG({ className, style }: SVGProps) {
-  return (
-    <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/>
-    </svg>
-  );
-}
-
-/** Panini sticker-style badge — homage to the official sticker provider */
-function PaniniBadge({ className, style }: SVGProps) {
-  return (
-    <svg className={className} style={style} viewBox="0 0 90 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Sticker frame */}
-      <rect x="1" y="1" width="88" height="26" rx="4" fill="#1a0a00" stroke="#E61D25" strokeWidth="1.4"/>
-      {/* Red accent bar left */}
-      <rect x="1" y="1" width="6" height="26" rx="4" fill="#E61D25"/>
-      <rect x="5" y="1" width="3" height="26" fill="#E61D25"/>
-      {/* Gold accent bar right */}
-      <rect x="80" y="1" width="9" height="26" rx="4" fill="#F0A500"/>
-      <rect x="80" y="1" width="4" height="26" fill="#F0A500"/>
-      {/* PANINI text */}
-      <text x="45" y="19" textAnchor="middle" fontFamily="Arial Black, Arial" fontWeight="900" fontSize="13" letterSpacing="2" fill="white">PANINI</text>
-      {/* Tiny star */}
-      <text x="12" y="19" textAnchor="middle" fontFamily="Arial" fontSize="11" fill="white">★</text>
-    </svg>
-  );
-}
-
-// ── Background ─────────────────────────────────────────────────────────────────
-
-function Background() {
-  return (
-    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none select-none">
-      {/* Base: deep WC-blue tinted dark */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#06091E] via-[#080D28] to-[#06091A]" />
-      {/* WC Blue glow — top right */}
-      <div className="absolute -top-40 -right-40 w-[560px] h-[560px] rounded-full blur-[130px]" style={{ background: `${WC.blue}22` }} />
-      {/* WC Red glow — bottom left */}
-      <div className="absolute -bottom-40 -left-40 w-[460px] h-[460px] rounded-full blur-[110px]" style={{ background: `${WC.red}18` }} />
-      {/* WC Green glow — mid */}
-      <div className="absolute top-1/2 left-1/4 w-[300px] h-[200px] rounded-full blur-[90px]" style={{ background: `${WC.green}0E` }} />
-      {/* Decorative SVGs */}
-      <TrophySVG className="absolute top-4 right-4 w-24 h-28 opacity-10" style={{ color: WC.gold }} />
-      <WC26SVG   className="absolute bottom-16 left-3 w-20 h-20 opacity-8" style={{ color: WC.blue }} />
-      <BallSVG   className="absolute top-1/3 right-3 w-16 h-16 opacity-6" style={{ color: WC.red }} />
-      <StarSVG   className="absolute top-24 left-6 w-4 h-4 opacity-20" style={{ color: WC.gold }} />
-      <StarSVG   className="absolute top-40 left-14 w-2.5 h-2.5 opacity-15" style={{ color: WC.gold }} />
-      <StarSVG   className="absolute bottom-36 right-8 w-3 h-3 opacity-15" style={{ color: WC.gold }} />
-      <StarSVG   className="absolute bottom-52 right-20 w-2 h-2 opacity-10" style={{ color: WC.gold }} />
-    </div>
-  );
-}
-
-// ── Panini footer strip ────────────────────────────────────────────────────────
-
-function PaniniStrip() {
-  return (
-    <div className="flex items-center justify-center gap-2 py-1 mt-2 mb-1">
-      <span className="text-xs text-white/20 tracking-wider uppercase">Official sticker collection by</span>
-      <PaniniBadge className="h-5 w-auto opacity-60" />
-    </div>
+    <span
+      className="inline-block w-2 h-2 rounded-full transition-colors shrink-0"
+      style={{ background: syncing ? WC.gold : WC.green }}
+    />
   );
 }
 
 // ── Header ─────────────────────────────────────────────────────────────────────
 
-function SyncDot({ syncing }: { syncing: boolean }) {
-  return (
-    <span
-      className="inline-block w-2 h-2 rounded-full transition-colors"
-      style={{ background: syncing ? WC.gold : WC.green, opacity: syncing ? 1 : 0.9 }}
-    />
-  );
-}
-
 function Header({ username, syncing, onLogout }: { username: string; syncing: boolean; onLogout: () => void }) {
   return (
-    <header className="px-4 pt-6 pb-2">
-      {/* Top row: logo + user chip */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <TrophySVG className="w-10 h-12 shrink-0" style={{ color: WC.gold }} />
-          <div>
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <StarSVG className="w-3 h-3" style={{ color: WC.gold }} />
-              <StarSVG className="w-3 h-3" style={{ color: WC.gold }} />
-              <StarSVG className="w-3 h-3" style={{ color: WC.gold }} />
+    <header>
+      {/* Main header bar — WC blue, full bleed */}
+      <div style={{ background: WC.blue }}>
+        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between gap-3">
+          {/* Logo + title */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="shrink-0" style={{ mixBlendMode: "screen" }}>
+              <Image src="/wc2026-logo-new.png" alt="FIFA World Cup 2026" width={56} height={56} className="object-contain" />
             </div>
-            <h1 className="text-xl font-extrabold leading-tight tracking-tight text-white">
-              Panini WC<span className="ml-1" style={{ color: WC.gold }}>2026</span>
-            </h1>
-            <p className="text-[11px] font-semibold tracking-[0.2em] uppercase" style={{ color: `${WC.blue}CC` }}>
-              Sticker Tracker
-            </p>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold tracking-[0.25em] uppercase" style={{ color: `${WC.gray}90` }}>
+                Panini Official
+              </p>
+              <h1
+                className="text-2xl font-bold uppercase leading-none tracking-wide text-white truncate"
+                style={{ fontFamily: "var(--font-barlow), var(--font-inter)" }}
+              >
+                Sticker Tracker
+              </h1>
+              <p className="text-[10px] font-semibold tracking-[0.18em] uppercase" style={{ color: `${WC.gray}70` }}>
+                FIFA World Cup 2026
+              </p>
+            </div>
+          </div>
+
+          {/* User chip */}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <div
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
+              style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.2)" }}
+            >
+              <SyncDot syncing={syncing} />
+              <span className="text-sm font-semibold text-white">@{username}</span>
+            </div>
+            <button
+              onClick={onLogout}
+              className="text-xs px-2 py-0.5 rounded transition-colors hover:bg-white/10"
+              style={{ color: `${WC.gray}70` }}
+            >
+              Sign out
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-1.5 pt-1">
-          <div className="flex items-center gap-1.5 rounded-full px-3 py-1.5 border" style={{ background: `${WC.blue}22`, borderColor: `${WC.blue}44` }}>
-            <SyncDot syncing={syncing} />
-            <span className="text-sm font-semibold text-white/90">@{username}</span>
-          </div>
-          <button
-            onClick={onLogout}
-            className="text-sm font-medium px-3 py-1.5 rounded-lg transition-colors text-white/40 hover:text-white/80 hover:bg-white/5 active:bg-white/10"
-          >
-            Sign out
-          </button>
+        {/* Host nations bar: USA · Mexico · Canada */}
+        <div className="flex h-[3px]">
+          <div className="flex-1" style={{ background: "#002868" }} />
+          <div className="flex-1" style={{ background: WC.green }} />
+          <div className="flex-1" style={{ background: WC.red }} />
         </div>
       </div>
 
-      {/* Host nations colour bar: USA blue | Mexico green | Canada red */}
-      <div className="flex h-1 rounded-full overflow-hidden gap-px">
-        <div className="flex-1 rounded-l-full" style={{ background: WC.blue }} />
-        <div className="flex-1" style={{ background: WC.green }} />
-        <div className="flex-1 rounded-r-full" style={{ background: WC.red }} />
+      {/* Sub-header: Panini branding strip */}
+      <div className="max-w-lg mx-auto px-4 py-1.5 flex items-center gap-2" style={{ background: WC.ink }}>
+        <span className="text-[10px] font-semibold tracking-[0.2em] uppercase" style={{ color: `${WC.gray}55` }}>
+          Official Sticker Collection ·
+        </span>
+        <div className="rounded overflow-hidden">
+          <Image src="/panini-logo.png" alt="Panini" width={52} height={13} className="object-contain" style={{ height: "auto" }} />
+        </div>
       </div>
     </header>
   );
@@ -265,35 +163,40 @@ function AddPanel({
   }
 
   return (
-    <Card className="mb-4 border" style={{ background: `${color}15`, borderColor: `${color}33` }}>
-      <CardContent className="pt-3 pb-3 px-3 space-y-2">
+    <div className="mb-4 rounded-xl border-2 overflow-hidden" style={{ borderColor: color }}>
+      <div className="px-3 py-2" style={{ background: color }}>
+        <p className="text-xs font-bold uppercase tracking-widest text-white" style={{ fontFamily: "var(--font-barlow)" }}>
+          {accent === "blue" ? "Add Missing Stickers" : "Add Duplicates"}
+        </p>
+      </div>
+      <div className="bg-white p-3 space-y-2">
         <Textarea
           autoFocus
-          className="font-mono text-base bg-white/5 border-white/10 placeholder:text-white/30 resize-none h-28 text-white focus-visible:ring-0 focus-visible:border-white/25"
+          className="font-mono text-sm bg-[#F8F9FC] border-[#D6DAE8] placeholder:text-[#9CA3B0] resize-none h-24 text-[#1C1F2E] focus-visible:ring-1 focus-visible:border-[#2A398D]"
           placeholder={placeholder}
           value={value}
           onChange={(e) => setValue(e.target.value)}
         />
-        <p className="text-sm text-white/45 px-0.5">{hint}</p>
+        <p className="text-xs text-[#6B7080] px-0.5">{hint}</p>
         <div className="flex gap-2 pt-1">
           <button
             onClick={handleSave}
             disabled={!value.trim()}
-            className="flex-1 py-3 rounded-xl text-base font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: color }}
+            className="flex-1 py-2.5 rounded-lg text-sm font-bold uppercase tracking-wider text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ background: color, fontFamily: "var(--font-barlow)" }}
           >
             Save to list
           </button>
           <button
             onClick={onCancel}
-            className="px-5 py-3 rounded-xl text-base font-semibold transition-colors border text-white/55 hover:text-white hover:bg-white/5 active:bg-white/10"
-            style={{ borderColor: `${color}44` }}
+            className="px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors border text-[#6B7080] hover:text-[#1C1F2E] hover:bg-[#F0F2F7]"
+            style={{ borderColor: "#D6DAE8" }}
           >
             Cancel
           </button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -303,10 +206,10 @@ function SearchInput({ value, onChange, accent }: { value: string; onChange: (v:
   const color = accent === "blue" ? WC.blue : WC.red;
   return (
     <div
-      className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 mb-3 border transition-all"
-      style={{ background: "rgba(255,255,255,0.04)", borderColor: value ? `${color}66` : "rgba(255,255,255,0.1)" }}
+      className="flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 mb-3 border transition-all bg-white"
+      style={{ borderColor: value ? color : "#D6DAE8" }}
     >
-      <svg viewBox="0 0 20 20" fill="none" className="w-5 h-5 shrink-0 text-white/35">
+      <svg viewBox="0 0 20 20" fill="none" className="w-4 h-4 shrink-0" style={{ color: "#9CA3B0" }}>
         <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.8"/>
         <path d="M13.5 13.5L17 17" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
       </svg>
@@ -315,10 +218,10 @@ function SearchInput({ value, onChange, accent }: { value: string; onChange: (v:
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search by code, name or team..."
-        className="flex-1 bg-transparent text-base text-white placeholder:text-white/30 focus:outline-none min-w-0"
+        className="flex-1 bg-transparent text-sm text-[#1C1F2E] placeholder:text-[#9CA3B0] focus:outline-none min-w-0"
       />
       {value && (
-        <button onClick={() => onChange("")} className="text-white/30 hover:text-white/60 transition-colors shrink-0">
+        <button onClick={() => onChange("")} className="transition-colors shrink-0" style={{ color: "#9CA3B0" }}>
           <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
             <path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
           </svg>
@@ -335,56 +238,74 @@ function AddButton({ accent, onClick }: { accent: "blue" | "red"; onClick: () =>
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl border border-dashed text-base font-bold transition-all mb-4 text-white/70 hover:text-white active:opacity-80"
-      style={{ borderColor: `${color}55`, background: `${color}0D` }}
+      className="w-full flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold uppercase tracking-widest text-white mb-4 transition-all active:scale-[0.98]"
+      style={{ background: color, fontFamily: "var(--font-barlow)" }}
     >
       <svg viewBox="0 0 16 16" fill="none" className="w-4 h-4">
         <path d="M8 2v12M2 8h12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
       </svg>
-      Add stickers
+      Add Stickers
     </button>
   );
 }
 
 // ── Sticker row ────────────────────────────────────────────────────────────────
 
-function StickerRow({ sticker, count, onRemove }: { sticker: Sticker; count?: number; onRemove: () => void }) {
+function StickerRow({ sticker, count, sectionColor, onRemove }: { sticker: Sticker; count?: number; sectionColor: string; onRemove: () => void }) {
   return (
-    <div className="flex items-center gap-2.5 py-3 border-b border-white/6 last:border-0">
-      <div className="flex items-center gap-1.5 shrink-0">
-        {sticker.foil && (
-          <Badge
-            className="text-xs px-1.5 py-0.5 font-bold border-0"
-            style={{ background: `linear-gradient(135deg, ${WC.gold}, #FFD700)`, color: "#1a0800" }}
-          >
-            FOIL
-          </Badge>
-        )}
-        {sticker.special && !sticker.foil && (
-          <Badge
-            variant="outline"
-            className="text-xs px-1.5 py-0.5"
-            style={{ borderColor: `${WC.green}88`, color: WC.green }}
-          >
-            SP
-          </Badge>
-        )}
-      </div>
-      <span className="font-mono text-base font-bold shrink-0 min-w-[4.5rem]" style={{ color: WC.gold }}>
+    <div
+      className="flex items-center gap-2.5 bg-white rounded-lg mb-1.5 px-3 py-2.5 border-l-4 shadow-sm"
+      style={{ borderLeftColor: sectionColor, borderTop: "1px solid #EEF0F7", borderRight: "1px solid #EEF0F7", borderBottom: "1px solid #EEF0F7" }}
+    >
+      {/* Badges */}
+      {(sticker.foil || sticker.special) && (
+        <div className="shrink-0">
+          {sticker.foil && (
+            <Badge
+              className="text-[10px] px-1.5 py-0 font-bold border-0 leading-5"
+              style={{ background: `linear-gradient(135deg, ${WC.gold}, #FFD700)`, color: "#5C3D00" }}
+            >
+              FOIL
+            </Badge>
+          )}
+          {sticker.special && !sticker.foil && (
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 font-bold leading-5"
+              style={{ borderColor: `${WC.green}88`, color: WC.green }}
+            >
+              SP
+            </Badge>
+          )}
+        </div>
+      )}
+      {/* Sticker code */}
+      <span
+        className="font-mono text-sm font-bold shrink-0 min-w-[4rem]"
+        style={{ color: WC.dark, fontFamily: "var(--font-mono)" }}
+      >
         {sticker.code}{sticker.num}
       </span>
-      <span className="text-base text-white flex-1 truncate">{sticker.name}</span>
+      {/* Name */}
+      <span className="text-sm font-medium flex-1 truncate" style={{ color: WC.ink }}>
+        {sticker.name}
+      </span>
+      {/* Count badge for duplicates */}
       {count !== undefined && count > 1 && (
         <Badge
-          className="text-sm font-bold shrink-0 border"
-          style={{ background: `${WC.red}25`, color: "#FF6B6B", borderColor: `${WC.red}44` }}
+          className="text-xs font-bold shrink-0 border"
+          style={{ background: `${WC.red}15`, color: WC.red, borderColor: `${WC.red}30` }}
         >
           ×{count}
         </Badge>
       )}
+      {/* Remove button */}
       <button
         onClick={onRemove}
-        className="ml-1 w-8 h-8 flex items-center justify-center rounded-full transition-colors shrink-0 text-white/25 hover:text-red-400 hover:bg-red-400/10 active:bg-red-400/20"
+        className="ml-auto w-7 h-7 flex items-center justify-center rounded-full transition-colors shrink-0"
+        style={{ color: "#BCC0CC" }}
+        onMouseEnter={e => (e.currentTarget.style.color = WC.red)}
+        onMouseLeave={e => (e.currentTarget.style.color = "#BCC0CC")}
         aria-label="Remove"
       >
         <svg viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5">
@@ -398,21 +319,27 @@ function StickerRow({ sticker, count, onRemove }: { sticker: Sticker; count?: nu
 // ── Section group ──────────────────────────────────────────────────────────────
 
 function SectionGroup({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  const color = sectionAccent(title);
   return (
-    <div className="mb-3">
-      <div className="flex items-center gap-2 mb-1.5 px-1">
-        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: WC.blue }} />
-        <h3 className="text-sm font-bold uppercase tracking-wider text-white/55">{title}</h3>
+    <div className="mb-4">
+      <div
+        className="flex items-center gap-2 mb-2 pb-1.5 border-b-2"
+        style={{ borderColor: color }}
+      >
+        <h3
+          className="text-base font-bold uppercase tracking-widest leading-none"
+          style={{ color, fontFamily: "var(--font-barlow)" }}
+        >
+          {title}
+        </h3>
         <span
-          className="text-xs font-semibold px-1.5 py-0.5 rounded-full text-white/40"
-          style={{ background: `${WC.blue}25` }}
+          className="text-xs font-bold px-2 py-0.5 rounded-full text-white leading-5"
+          style={{ background: color }}
         >
           {count}
         </span>
       </div>
-      <Card className="border" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.07)" }}>
-        <CardContent className="px-3 py-0">{children}</CardContent>
-      </Card>
+      <div>{children}</div>
     </div>
   );
 }
@@ -438,16 +365,20 @@ function ConfirmModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 pb-6 sm:pb-0">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onCancel} />
-      <Card className="relative z-10 w-full max-w-sm border" style={{ background: "#0b1028", borderColor: `${color}55` }}>
-        <CardContent className="pt-5 pb-4 px-4 space-y-4">
-          <div>
-            <span className="font-mono text-lg font-bold" style={{ color: WC.gold }}>
-              {sticker.code}{sticker.num}
-            </span>
-            <p className="text-sm text-white/70 mt-0.5">{sticker.name}</p>
-          </div>
-          <p className="text-sm text-white/55 leading-relaxed">{message}</p>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} />
+      <div className="relative z-10 w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-2xl">
+        {/* Colored header bar */}
+        <div className="px-4 py-3" style={{ background: color }}>
+          <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-white/70">
+            {type === "missing" ? "Missing List" : "Duplicates"}
+          </p>
+          <p className="font-bold text-lg text-white leading-tight" style={{ fontFamily: "var(--font-barlow)" }}>
+            {sticker.code}{sticker.num} — {sticker.name}
+          </p>
+        </div>
+        {/* Body */}
+        <div className="px-4 py-4 space-y-4">
+          <p className="text-sm leading-relaxed" style={{ color: WC.dark }}>{message}</p>
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -456,37 +387,39 @@ function ConfirmModal({
               className="w-4 h-4 rounded cursor-pointer"
               style={{ accentColor: color }}
             />
-            <span className="text-xs text-white/40">Never ask me to confirm again</span>
+            <span className="text-xs" style={{ color: "#9CA3B0" }}>Never ask me to confirm again</span>
           </label>
           <div className="flex gap-2 pt-1">
             <button
               onClick={onCancel}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border text-white/50 hover:text-white hover:bg-white/5 active:bg-white/10 transition-colors"
-              style={{ borderColor: "rgba(255,255,255,0.12)" }}
+              className="flex-1 py-2.5 rounded-lg text-sm font-semibold border transition-colors hover:bg-[#F0F2F7]"
+              style={{ borderColor: "#D6DAE8", color: WC.dark }}
             >
               Keep
             </button>
             <button
               onClick={() => onConfirm(neverAsk)}
-              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white transition-colors active:opacity-80"
-              style={{ background: color }}
+              className="flex-1 py-2.5 rounded-lg text-sm font-bold text-white transition-colors active:opacity-80"
+              style={{ background: color, fontFamily: "var(--font-barlow)" }}
             >
               Remove
             </button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ── Empty state ────────────────────────────────────────────────────────────────
 
-function EmptyState({ hint }: { hint: string }) {
+function EmptyState({ hint, type }: { hint: string; type: "missing" | "duplicate" }) {
   return (
-    <div className="flex flex-col items-center justify-center py-14 gap-4 text-center px-6">
-      <BallSVG className="w-16 h-16 opacity-15" style={{ color: WC.blue }} />
-      <p className="text-sm text-white/35">{hint}</p>
+    <div className="flex flex-col items-center justify-center py-12 gap-4 text-center px-6">
+      <div className="relative w-28 h-28 rounded-2xl overflow-hidden shadow-md opacity-60">
+        <Image src="/stickers.jpeg" alt="" fill sizes="112px" loading="eager" className="object-cover" />
+      </div>
+      <p className="text-sm leading-relaxed max-w-[220px]" style={{ color: "#9CA3B0" }}>{hint}</p>
     </div>
   );
 }
@@ -536,18 +469,13 @@ function MissingTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain }: 
   return (
     <div>
       {pendingRemove && (
-        <ConfirmModal
-          sticker={pendingRemove}
-          type="missing"
-          onConfirm={handleConfirm}
-          onCancel={() => setPendingRemove(null)}
-        />
+        <ConfirmModal sticker={pendingRemove} type="missing" onConfirm={handleConfirm} onCancel={() => setPendingRemove(null)} />
       )}
       {panelOpen ? (
         <AddPanel
           accent="blue"
           placeholder={"FWC1, ARG3, MEX17\nOne code per line or comma-separated"}
-          hint={<>Case-insensitive · e.g. <span className="font-mono" style={{ color: WC.gold }}>FWC1</span>, <span className="font-mono" style={{ color: WC.gold }}>arg3</span></>}
+          hint={<>Case-insensitive · e.g. <span className="font-mono font-bold" style={{ color: WC.blue }}>FWC1</span>, <span className="font-mono font-bold" style={{ color: WC.blue }}>arg3</span></>}
           onSave={handleSave}
           onCancel={() => setPanelOpen(false)}
         />
@@ -556,18 +484,20 @@ function MissingTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain }: 
       )}
 
       {items.length === 0 ? (
-        <EmptyState hint={'No missing stickers yet. Tap "Add stickers" to start tracking.'} />
+        <EmptyState type="missing" hint='No missing stickers yet. Tap "Add Stickers" to start tracking.' />
       ) : (
         <>
           <SearchInput value={query} onChange={setQuery} accent="blue" />
           {filtered.length === 0 ? (
-            <EmptyState hint={`No results for "${query}"`} />
+            <EmptyState type="missing" hint={`No results for "${query}"`} />
           ) : (
             <ScrollArea className="max-h-[55vh]">
               <div className="pr-1">
                 {groups.map(([section, stickers]) => (
                   <SectionGroup key={section} title={section} count={stickers.length}>
-                    {stickers.map((s) => <StickerRow key={s.id} sticker={s} onRemove={() => handleRemoveClick(s)} />)}
+                    {stickers.map((s) => (
+                      <StickerRow key={s.id} sticker={s} sectionColor={sectionAccent(section)} onRemove={() => handleRemoveClick(s)} />
+                    ))}
                   </SectionGroup>
                 ))}
               </div>
@@ -627,18 +557,13 @@ function DuplicatesTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain 
   return (
     <div>
       {pendingRemove && (
-        <ConfirmModal
-          sticker={pendingRemove}
-          type="duplicate"
-          onConfirm={handleConfirm}
-          onCancel={() => setPendingRemove(null)}
-        />
+        <ConfirmModal sticker={pendingRemove} type="duplicate" onConfirm={handleConfirm} onCancel={() => setPendingRemove(null)} />
       )}
       {panelOpen ? (
         <AddPanel
           accent="red"
           placeholder={"ARG17x3, MEX2, FWC5x2\nAppend xN for the count"}
-          hint={<>Append <span className="font-mono" style={{ color: WC.red }}>x3</span> for count · e.g. <span className="font-mono" style={{ color: WC.red }}>ARG17x3</span></>}
+          hint={<>Append <span className="font-mono font-bold" style={{ color: WC.red }}>x3</span> for count · e.g. <span className="font-mono font-bold" style={{ color: WC.red }}>ARG17x3</span></>}
           onSave={handleSave}
           onCancel={() => setPanelOpen(false)}
         />
@@ -647,19 +572,25 @@ function DuplicatesTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain 
       )}
 
       {items.length === 0 ? (
-        <EmptyState hint={'No duplicates yet. Tap "Add stickers" to log your extras.'} />
+        <EmptyState type="duplicate" hint='No duplicates yet. Tap "Add Stickers" to log your extras.' />
       ) : (
         <>
           <SearchInput value={query} onChange={setQuery} accent="red" />
           {resolved.length === 0 ? (
-            <EmptyState hint={`No results for "${query}"`} />
+            <EmptyState type="duplicate" hint={`No results for "${query}"`} />
           ) : (
             <ScrollArea className="max-h-[55vh]">
               <div className="pr-1">
                 {groups.map(([section, entries]) => (
                   <SectionGroup key={section} title={section} count={entries.length}>
                     {entries.map(({ entry, sticker }) => (
-                      <StickerRow key={sticker.id} sticker={sticker} count={entry.count} onRemove={() => handleRemoveClick(sticker)} />
+                      <StickerRow
+                        key={sticker.id}
+                        sticker={sticker}
+                        count={entry.count}
+                        sectionColor={sectionAccent(section)}
+                        onRemove={() => handleRemoveClick(sticker)}
+                      />
                     ))}
                   </SectionGroup>
                 ))}
@@ -675,12 +606,12 @@ function DuplicatesTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [token, setToken]           = useState<string | null>(null);
-  const [username, setUsername]     = useState<string | null>(null);
-  const [missing, setMissing]       = useState<Sticker[]>([]);
-  const [dupes, setDupes]           = useState<DuplicateEntry[]>([]);
+  const [token, setToken]               = useState<string | null>(null);
+  const [username, setUsername]         = useState<string | null>(null);
+  const [missing, setMissing]           = useState<Sticker[]>([]);
+  const [dupes, setDupes]               = useState<DuplicateEntry[]>([]);
   const [confirmRemove, setConfirmRemove] = useState(true);
-  const [syncing, setSyncing]       = useState(false);
+  const [syncing, setSyncing]           = useState(false);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -765,49 +696,87 @@ export default function Home() {
 
   return (
     <>
-      <Background />
       {!token && <AuthModal onAuth={handleAuth} />}
-      <main className="min-h-screen">
-        <div className="max-w-lg mx-auto px-4 pb-6">
-          {token && username && (
-            <Header username={username} syncing={syncing} onLogout={handleLogout} />
-          )}
+      <div className="min-h-screen" style={{ background: WC.paper }}>
+        {token && username && (
+          <Header username={username} syncing={syncing} onLogout={handleLogout} />
+        )}
 
-          <Tabs defaultValue="missing" className="mt-4">
-            <TabsList className="w-full h-13 p-1 border" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.09)" }}>
-              <TabsTrigger
-                value="missing"
-                className="flex-1 text-base font-bold text-white/50 data-[state=active]:text-white data-[state=active]:shadow-none transition-all"
-                style={{ "--tw-bg-active": WC.blue } as React.CSSProperties}
+        <main className="max-w-lg mx-auto">
+          {/* Album content area — white sheet */}
+          <div className="bg-white mx-3 mt-3 mb-4 rounded-xl shadow-md overflow-hidden">
+            <Tabs defaultValue="missing">
+              {/* Tab bar */}
+              <TabsList
+                className="w-full h-auto p-0 rounded-none border-b"
+                style={{ background: WC.paper, borderColor: "#D6DAE8" }}
               >
-                <span className="data-[state=active]:hidden" />
-                Missing
-                {missing.length > 0 && (
-                  <span className="ml-2 text-sm font-bold bg-black/20 px-2 py-0.5 rounded-full">{missing.length}</span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger
-                value="duplicates"
-                className="flex-1 text-base font-bold text-white/50 data-[state=active]:text-white data-[state=active]:shadow-none transition-all"
-              >
-                Duplicates
-                {dupes.length > 0 && (
-                  <span className="ml-2 text-sm font-bold bg-white/20 px-2 py-0.5 rounded-full">{dupes.length}</span>
-                )}
-              </TabsTrigger>
-            </TabsList>
+                <TabsTrigger
+                  value="missing"
+                  className="flex-1 rounded-none py-3 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent data-[state=active]:border-b-[3px] data-[state=active]:shadow-none transition-all"
+                  style={
+                    { "--active-color": WC.blue } as React.CSSProperties
+                  }
+                  data-accent="blue"
+                >
+                  <span>Missing</span>
+                  {missing.length > 0 && (
+                    <span
+                      className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                      style={{ background: WC.blue }}
+                    >
+                      {missing.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="duplicates"
+                  className="flex-1 rounded-none py-3 text-sm font-bold uppercase tracking-wider border-b-2 border-transparent data-[state=active]:border-b-[3px] data-[state=active]:shadow-none transition-all"
+                >
+                  <span>Duplicates</span>
+                  {dupes.length > 0 && (
+                    <span
+                      className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full text-white"
+                      style={{ background: WC.red }}
+                    >
+                      {dupes.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="missing" className="mt-4">
-              <MissingTab items={missing} onAdd={addMissing} onRemove={removeMissing} confirmRemove={confirmRemove} onNeverAskAgain={handleNeverAskAgain} />
-            </TabsContent>
-            <TabsContent value="duplicates" className="mt-4">
-              <DuplicatesTab items={dupes} onAdd={addDupes} onRemove={removeDupe} confirmRemove={confirmRemove} onNeverAskAgain={handleNeverAskAgain} />
-            </TabsContent>
-          </Tabs>
+              <TabsContent value="missing" className="mt-0 p-4">
+                <MissingTab
+                  items={missing}
+                  onAdd={addMissing}
+                  onRemove={removeMissing}
+                  confirmRemove={confirmRemove}
+                  onNeverAskAgain={handleNeverAskAgain}
+                />
+              </TabsContent>
+              <TabsContent value="duplicates" className="mt-0 p-4">
+                <DuplicatesTab
+                  items={dupes}
+                  onAdd={addDupes}
+                  onRemove={removeDupe}
+                  confirmRemove={confirmRemove}
+                  onNeverAskAgain={handleNeverAskAgain}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
 
-          <PaniniStrip />
-        </div>
-      </main>
+          {/* Footer */}
+          <div className="flex items-center justify-center gap-2 py-2 px-4">
+            <span className="text-[10px] tracking-widest uppercase" style={{ color: "#9CA3B0" }}>
+              Unofficial fan tracker · not affiliated with
+            </span>
+            <div className="rounded overflow-hidden opacity-50">
+              <Image src="/panini-logo.png" alt="Panini" width={44} height={11} className="object-contain" />
+            </div>
+          </div>
+        </main>
+      </div>
     </>
   );
 }

@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-barlow);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -44,59 +44,59 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) * 1.4);
   --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
 
   /* FIFA World Cup 2026 official palette */
   --wc-blue:  #2A398D;
   --wc-red:   #E61D25;
   --wc-green: #3CAC3B;
+  --wc-gray:  #D1D4D1;
+  --wc-dark:  #474A4A;
   --wc-gold:  #F0A500;
 }
 
 :root {
-  /* Base surfaces — deep WC-blue tinted dark */
-  --background: oklch(0.07 0.03 265);
-  --foreground: oklch(0.97 0 0);
-  --card: oklch(0.11 0.035 265);
-  --card-foreground: oklch(0.97 0 0);
-  --popover: oklch(0.11 0.035 265);
-  --popover-foreground: oklch(0.97 0 0);
+  /* Light theme — Panini album aesthetic */
+  --background: #EEF0F7;
+  --foreground: #1C1F2E;
+  --card: #FFFFFF;
+  --card-foreground: #1C1F2E;
+  --popover: #FFFFFF;
+  --popover-foreground: #1C1F2E;
 
-  /* Primary = WC Blue #2A398D */
-  --primary: oklch(0.38 0.17 265);
-  --primary-foreground: oklch(0.97 0 0);
+  /* Primary = WC Blue */
+  --primary: #2A398D;
+  --primary-foreground: #FFFFFF;
 
-  --secondary: oklch(0.16 0.04 265);
-  --secondary-foreground: oklch(0.97 0 0);
-  --muted: oklch(0.16 0.03 265);
-  --muted-foreground: oklch(0.62 0.04 265);
-  --accent: oklch(0.20 0.04 265);
-  --accent-foreground: oklch(0.97 0 0);
+  --secondary: #E8EBF5;
+  --secondary-foreground: #1C1F2E;
+  --muted: #E8EBF5;
+  --muted-foreground: #6B7080;
+  --accent: #E8EBF5;
+  --accent-foreground: #1C1F2E;
 
-  /* Destructive = WC Red #E61D25 */
-  --destructive: oklch(0.53 0.23 25);
+  /* Destructive = WC Red */
+  --destructive: #E61D25;
 
-  --border: oklch(1 0 0 / 10%);
-  --input:  oklch(1 0 0 / 8%);
-  --ring:   oklch(0.38 0.17 265);
+  --border: #D6DAE8;
+  --input:  #E8EBF5;
+  --ring:   #2A398D;
 
-  --chart-1: oklch(0.38 0.17 265);
-  --chart-2: oklch(0.53 0.23 25);
-  --chart-3: oklch(0.60 0.18 145);
-  --chart-4: oklch(0.72 0.17 52);
-  --chart-5: oklch(0.65 0.2 200);
+  --chart-1: #2A398D;
+  --chart-2: #E61D25;
+  --chart-3: #3CAC3B;
+  --chart-4: #F0A500;
+  --chart-5: #474A4A;
 
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 
-  --sidebar: oklch(0.10 0.035 265);
-  --sidebar-foreground: oklch(0.97 0 0);
-  --sidebar-primary: oklch(0.38 0.17 265);
-  --sidebar-primary-foreground: oklch(0.97 0 0);
-  --sidebar-accent: oklch(0.16 0.04 265);
-  --sidebar-accent-foreground: oklch(0.97 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.38 0.17 265);
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1C1F2E;
+  --sidebar-primary: #2A398D;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #E8EBF5;
+  --sidebar-accent-foreground: #1C1F2E;
+  --sidebar-border: #D6DAE8;
+  --sidebar-ring: #2A398D;
 }
 
 @layer base {
@@ -109,4 +109,17 @@
   html {
     @apply font-sans;
   }
+}
+
+/* Tab active underline colors */
+[data-slot="tabs-trigger"][data-state="active"][data-accent="blue"] {
+  border-bottom-color: #2A398D !important;
+  color: #2A398D !important;
+}
+[data-slot="tabs-trigger"][data-state="active"]:not([data-accent="blue"]) {
+  border-bottom-color: #E61D25 !important;
+  color: #E61D25 !important;
+}
+[data-slot="tabs-trigger"][data-state="inactive"] {
+  color: #9CA3B0;
 }
