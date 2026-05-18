@@ -62,7 +62,31 @@ function SyncDot({ syncing }: { syncing: boolean }) {
 
 // ── Header ─────────────────────────────────────────────────────────────────────
 
-function Header({ username, syncing, onLogout }: { username: string; syncing: boolean; onLogout: () => void }) {
+function Header({ username, syncing, token, onLogout }: { username: string; syncing: boolean; token: string; onLogout: () => void }) {
+  const [shareState, setShareState] = useState<"idle" | "loading" | "copied">("idle");
+
+  async function handleShare() {
+    setShareState("loading");
+    try {
+      const res = await fetch("/api/share/create", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const url = `${window.location.origin}/trade/${data.shareToken}`;
+      if (navigator.share) {
+        await navigator.share({ title: "Trade Panini stickers with me!", url });
+        setShareState("idle");
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareState("copied");
+        setTimeout(() => setShareState("idle"), 2500);
+      }
+    } catch {
+      setShareState("idle");
+    }
+  }
+
   return (
     <header>
       {/* Main header bar — WC blue, full bleed */}
@@ -89,7 +113,7 @@ function Header({ username, syncing, onLogout }: { username: string; syncing: bo
             </div>
           </div>
 
-          {/* User chip */}
+          {/* User chip + share */}
           <div className="flex flex-col items-end gap-1 shrink-0">
             <div
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
@@ -98,13 +122,27 @@ function Header({ username, syncing, onLogout }: { username: string; syncing: bo
               <SyncDot syncing={syncing} />
               <span className="text-sm font-semibold text-white">@{username}</span>
             </div>
-            <button
-              onClick={onLogout}
-              className="text-xs px-2 py-0.5 rounded transition-colors hover:bg-white/10"
-              style={{ color: `${WC.gray}70` }}
-            >
-              Sign out
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleShare}
+                disabled={shareState === "loading"}
+                className="text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                style={{
+                  background: shareState === "copied" ? WC.green : "rgba(255,255,255,0.18)",
+                  color: "#fff",
+                  fontFamily: "var(--font-barlow)",
+                }}
+              >
+                {shareState === "loading" ? "…" : shareState === "copied" ? "Copied!" : "Share"}
+              </button>
+              <button
+                onClick={onLogout}
+                className="text-xs px-2 py-0.5 rounded transition-colors hover:bg-white/10"
+                style={{ color: `${WC.gray}70` }}
+              >
+                Sign out
+              </button>
+            </div>
           </div>
         </div>
 
@@ -830,7 +868,7 @@ export default function Home() {
       {!token && <AuthModal onAuth={handleAuth} />}
       <div className="min-h-screen" style={{ background: WC.paper }}>
         {token && username && (
-          <Header username={username} syncing={syncing} onLogout={handleLogout} />
+          <Header username={username} syncing={syncing} token={token} onLogout={handleLogout} />
         )}
 
         <main className="max-w-lg mx-auto">
