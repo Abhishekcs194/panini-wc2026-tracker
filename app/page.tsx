@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import AuthModal from "@/components/AuthModal";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -491,17 +490,15 @@ function MissingTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain }: 
           {filtered.length === 0 ? (
             <EmptyState type="missing" hint={`No results for "${query}"`} />
           ) : (
-            <ScrollArea className="max-h-[55vh]">
-              <div className="pr-1">
-                {groups.map(([section, stickers]) => (
-                  <SectionGroup key={section} title={section} count={stickers.length}>
-                    {stickers.map((s) => (
-                      <StickerRow key={s.id} sticker={s} sectionColor={sectionAccent(section)} onRemove={() => handleRemoveClick(s)} />
-                    ))}
-                  </SectionGroup>
-                ))}
-              </div>
-            </ScrollArea>
+            <div className="overflow-y-auto max-h-[55vh] pr-1">
+              {groups.map(([section, stickers]) => (
+                <SectionGroup key={section} title={section} count={stickers.length}>
+                  {stickers.map((s) => (
+                    <StickerRow key={s.id} sticker={s} sectionColor={sectionAccent(section)} onRemove={() => handleRemoveClick(s)} />
+                  ))}
+                </SectionGroup>
+              ))}
+            </div>
           )}
         </>
       )}
@@ -579,23 +576,21 @@ function DuplicatesTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain 
           {resolved.length === 0 ? (
             <EmptyState type="duplicate" hint={`No results for "${query}"`} />
           ) : (
-            <ScrollArea className="max-h-[55vh]">
-              <div className="pr-1">
-                {groups.map(([section, entries]) => (
-                  <SectionGroup key={section} title={section} count={entries.length}>
-                    {entries.map(({ entry, sticker }) => (
-                      <StickerRow
-                        key={sticker.id}
-                        sticker={sticker}
-                        count={entry.count}
-                        sectionColor={sectionAccent(section)}
-                        onRemove={() => handleRemoveClick(sticker)}
-                      />
-                    ))}
-                  </SectionGroup>
-                ))}
-              </div>
-            </ScrollArea>
+            <div className="overflow-y-auto max-h-[55vh] pr-1">
+              {groups.map(([section, entries]) => (
+                <SectionGroup key={section} title={section} count={entries.length}>
+                  {entries.map(({ entry, sticker }) => (
+                    <StickerRow
+                      key={sticker.id}
+                      sticker={sticker}
+                      count={entry.count}
+                      sectionColor={sectionAccent(section)}
+                      onRemove={() => handleRemoveClick(sticker)}
+                    />
+                  ))}
+                </SectionGroup>
+              ))}
+            </div>
           )}
         </>
       )}
