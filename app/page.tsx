@@ -133,12 +133,14 @@ function Header({ username, syncing, onLogout }: { username: string; syncing: bo
 
 function StickerPicker({ accent, onSave, onCancel }: {
   accent: "blue" | "red";
-  onSave: (stickers: Sticker[]) => void;
+  onSave: (entries: Array<{ sticker: Sticker; count: number }>) => void;
   onCancel: () => void;
 }) {
   const [prefix, setPrefix] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const color = accent === "blue" ? WC.blue : WC.red;
+  const showCounts = accent === "red";
 
   const matches = useMemo(() => {
     const p = prefix.trim().toUpperCase();
@@ -155,8 +157,13 @@ function StickerPicker({ accent, onSave, onCancel }: {
   function toggle(sticker: Sticker) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(sticker.id)) next.delete(sticker.id);
-      else next.add(sticker.id);
+      if (next.has(sticker.id)) {
+        next.delete(sticker.id);
+        setCounts((c) => { const n = { ...c }; delete n[sticker.id]; return n; });
+      } else {
+        next.add(sticker.id);
+        setCounts((c) => ({ ...c, [sticker.id]: 1 }));
+      }
       return next;
     });
   }
@@ -164,9 +171,15 @@ function StickerPicker({ accent, onSave, onCancel }: {
   function toggleAll() {
     if (selected.size === matches.length) {
       setSelected(new Set());
+      setCounts({});
     } else {
       setSelected(new Set(matches.map((s) => s.id)));
+      setCounts(Object.fromEntries(matches.map((s) => [s.id, counts[s.id] ?? 1])));
     }
+  }
+
+  function adjustCount(id: string, delta: number) {
+    setCounts((prev) => ({ ...prev, [id]: Math.max(1, (prev[id] ?? 1) + delta) }));
   }
 
   const selectedStickers = matches.filter((s) => selected.has(s.id));
@@ -190,7 +203,7 @@ function StickerPicker({ accent, onSave, onCancel }: {
               autoFocus
               type="text"
               value={prefix}
-              onChange={(e) => { setPrefix(e.target.value); setSelected(new Set()); }}
+              onChange={(e) => { setPrefix(e.target.value); setSelected(new Set()); setCounts({}); }}
               placeholder="POR"
               maxLength={6}
               className="w-full rounded-lg border-2 px-2 py-3 text-center text-xl font-bold uppercase focus:outline-none transition-colors bg-[#F8F9FC]"
@@ -255,25 +268,74 @@ function StickerPicker({ accent, onSave, onCancel }: {
           </div>
         </div>
 
-        {/* Selected preview */}
-        {selected.size > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {selectedStickers.map((s) => (
-              <span
-                key={s.id}
-                className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded"
-                style={{ background: `${color}18`, color }}
-              >
-                {s.code}{s.num}
-              </span>
-            ))}
+        {/* Selected preview — with count steppers for duplicates */}
+        {selectedStickers.length > 0 && (
+          <div className={showCounts ? "space-y-1.5" : "flex flex-wrap gap-1"}>
+            {selectedStickers.map((s) => {
+              const count = counts[s.id] ?? 1;
+              return showCounts ? (
+                <div
+                  key={s.id}
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5"
+                  style={{ background: `${color}0F` }}
+                >
+                  {/* Sticker code */}
+                  <span
+                    className="font-mono text-xs font-bold w-14 shrink-0"
+                    style={{ color }}
+                  >
+                    {s.code}{s.num}
+                  </span>
+                  {/* Sticker name */}
+                  <span className="text-xs flex-1 truncate" style={{ color: "#6B7080" }}>
+                    {s.name}
+                  </span>
+                  {/* Count stepper */}
+                  <div className="flex items-center gap-0 rounded-lg overflow-hidden shrink-0 border" style={{ borderColor: `${color}40` }}>
+                    <button
+                      type="button"
+                      onClick={() => adjustCount(s.id, -1)}
+                      className="w-8 h-8 flex items-center justify-center text-base font-bold transition-colors active:scale-90"
+                      style={{ color, background: `${color}12` }}
+                    >
+                      −
+                    </button>
+                    <span
+                      className="w-7 text-center text-sm font-bold tabular-nums"
+                      style={{ color: WC.ink }}
+                    >
+                      {count}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => adjustCount(s.id, +1)}
+                      className="w-8 h-8 flex items-center justify-center text-base font-bold transition-colors active:scale-90"
+                      style={{ color, background: `${color}12` }}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <span
+                  key={s.id}
+                  className="text-[11px] font-mono font-bold px-1.5 py-0.5 rounded"
+                  style={{ background: `${color}18`, color }}
+                >
+                  {s.code}{s.num}
+                </span>
+              );
+            })}
           </div>
         )}
 
         {/* Actions */}
         <div className="flex gap-2">
           <button
-            onClick={() => { if (selectedStickers.length > 0) onSave(selectedStickers); }}
+            onClick={() => {
+              if (selectedStickers.length > 0)
+                onSave(selectedStickers.map((s) => ({ sticker: s, count: counts[s.id] ?? 1 })));
+            }}
             disabled={selected.size === 0}
             className="flex-1 py-2.5 rounded-lg text-sm font-bold uppercase tracking-wider text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
             style={{ background: color, fontFamily: "var(--font-barlow)" }}
@@ -555,9 +617,9 @@ function MissingTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain }: 
       {panelOpen ? (
         <StickerPicker
           accent="blue"
-          onSave={(stickers) => {
+          onSave={(entries) => {
             const existingIds = new Set(items.map((s) => s.id));
-            const next = stickers.filter((s) => !existingIds.has(s.id));
+            const next = entries.map((e) => e.sticker).filter((s) => !existingIds.has(s.id));
             if (next.length > 0) onAdd(next);
             setPanelOpen(false);
           }}
@@ -631,8 +693,8 @@ function DuplicatesTab({ items, onAdd, onRemove, confirmRemove, onNeverAskAgain 
       {panelOpen ? (
         <StickerPicker
           accent="red"
-          onSave={(stickers) => {
-            onAdd(stickers.map((s) => ({ id: s.id, count: 1 })));
+          onSave={(entries) => {
+            onAdd(entries.map((e) => ({ id: e.sticker.id, count: e.count })));
             setPanelOpen(false);
           }}
           onCancel={() => setPanelOpen(false)}
