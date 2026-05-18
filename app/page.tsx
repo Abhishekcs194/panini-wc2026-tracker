@@ -126,13 +126,22 @@ function Header({ username, syncing, token, onLogout }: { username: string; sync
               <button
                 onClick={handleShare}
                 disabled={shareState === "loading"}
-                className="text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider transition-all disabled:opacity-50"
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full font-bold uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50"
                 style={{
-                  background: shareState === "copied" ? WC.green : "rgba(255,255,255,0.18)",
-                  color: "#fff",
+                  background: shareState === "copied" ? WC.green : "#fff",
+                  color: shareState === "copied" ? "#fff" : WC.blue,
                   fontFamily: "var(--font-barlow)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
                 }}
               >
+                {shareState === "idle" && (
+                  <svg viewBox="0 0 16 16" fill="none" className="w-3 h-3 shrink-0">
+                    <circle cx="12" cy="3" r="1.8" stroke="currentColor" strokeWidth="1.6"/>
+                    <circle cx="12" cy="13" r="1.8" stroke="currentColor" strokeWidth="1.6"/>
+                    <circle cx="4" cy="8" r="1.8" stroke="currentColor" strokeWidth="1.6"/>
+                    <path d="M10.3 4.2L5.7 6.9M10.3 11.8L5.7 9.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  </svg>
+                )}
                 {shareState === "loading" ? "…" : shareState === "copied" ? "Copied!" : "Share"}
               </button>
               <button
@@ -266,8 +275,12 @@ function StickerPicker({ accent, onSave, onCancel }: {
                 <button
                   type="button"
                   onClick={toggleAll}
-                  className="text-[10px] font-bold uppercase tracking-wider transition-colors"
-                  style={{ color }}
+                  className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full transition-all active:scale-95 border"
+                  style={{
+                    color,
+                    borderColor: `${color}50`,
+                    background: `${color}10`,
+                  }}
                 >
                   {selected.size === matches.length ? "None" : "All"}
                 </button>
