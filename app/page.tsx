@@ -891,7 +891,7 @@ export default function Home() {
               {/* Tab bar */}
               <TabsList
                 className="w-full h-auto p-0 rounded-none grid grid-cols-2"
-                style={{ background: WC.paper, borderBottom: `2px solid #D6DAE8` }}
+                style={{ background: "#fff", borderBottom: `2px solid #E8EAF0` }}
               >
                 {(["missing", "duplicates"] as const).map((tab) => {
                   const active = activeTab === tab;
@@ -901,10 +901,10 @@ export default function Home() {
                     <TabsTrigger
                       key={tab}
                       value={tab}
-                      className="relative flex items-center justify-center gap-2 rounded-none py-3 text-sm font-bold uppercase tracking-wider transition-all data-[state=active]:shadow-none"
+                      className="flex items-center justify-center gap-2 rounded-none py-3 text-sm font-bold uppercase tracking-wider transition-all data-[state=active]:shadow-none"
                       style={{
-                        background: active ? "#fff" : "transparent",
-                        color: active ? color : "#9CA3B0",
+                        background: "#fff",
+                        color: active ? color : "#B0B5C4",
                         borderBottom: active ? `3px solid ${color}` : "3px solid transparent",
                         marginBottom: -2,
                       }}
@@ -914,8 +914,8 @@ export default function Home() {
                         <span
                           className="text-xs font-bold px-2 py-0.5 rounded-full transition-colors"
                           style={{
-                            background: active ? color : "#D6DAE8",
-                            color: active ? "#fff" : "#9CA3B0",
+                            background: active ? color : "#E8EAF0",
+                            color: active ? "#fff" : "#B0B5C4",
                           }}
                         >
                           {count}
