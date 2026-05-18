@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Track your FIFA World Cup 2026 Panini stickers — missing & duplicates",
     start_url: "/",
     display: "standalone",
-    background_color: "#030718",
-    theme_color: "#030718",
+    background_color: "#2A398D",
+    theme_color: "#2A398D",
     orientation: "portrait",
     categories: ["sports", "lifestyle"],
     icons: [
