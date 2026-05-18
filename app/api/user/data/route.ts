@@ -11,8 +11,14 @@ export async function GET(req: Request) {
   const user = await client.db("panini").collection("users").findOne({ username: payload.username });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+  // missingList is the legacy comma-separated string field; missing is the current array field
+  let missing = user.missing ?? [];
+  if (missing.length === 0 && user.missingList) {
+    missing = user.missingList.split(",").map((id: string) => id.trim()).filter(Boolean);
+  }
+
   return NextResponse.json({
-    missing: user.missing ?? [],
+    missing,
     duplicates: user.duplicates ?? [],
   });
 }

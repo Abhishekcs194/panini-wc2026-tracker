@@ -580,7 +580,7 @@ export default function Home() {
       .then((data) => {
         const missingIds: string[] = data.missing ?? [];
         const dupesRaw: DuplicateEntry[] = data.duplicates ?? [];
-        setMissing(missingIds.map((id) => STICKERS.find((s) => s.id === id)!).filter(Boolean));
+        setMissing(missingIds.map((id) => STICKERS.find((s) => s.id.toLowerCase() === id.toLowerCase())!).filter(Boolean));
         setDupes(dupesRaw);
       })
       .catch(() => {});
